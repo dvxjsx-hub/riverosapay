@@ -1,0 +1,41 @@
+const crypto = require('crypto');
+
+// Hash simple (no es para producción, pero evita guardar contraseñas en texto plano)
+function hashPassword(pw) {
+  return crypto.createHash('sha256').update('riverospay_salt_' + pw).digest('hex');
+}
+
+function newId(prefix) {
+  return prefix + '_' + crypto.randomBytes(6).toString('hex');
+}
+
+// código de compartir: 8 dígitos, único y fijo por cuenta de empleado
+function newShareCode(db) {
+  let code;
+  do {
+    code = String(Math.floor(10000000 + Math.random() * 90000000));
+  } while (db.users.some(u => u.shareCode === code));
+  return code;
+}
+
+// reglas de LOGIN seguro
+const USERNAME_REGEX = /^[a-z]{5,10}$/;      // 5-10 caracteres, solo minúsculas, sin números ni símbolos
+const PASSWORD_REGEX = /^[A-Za-z0-9]{6,12}$/; // 6-12 caracteres, letras (mayús/minús) y números
+
+// hash del código de recuperación (sal distinta a la de la contraseña)
+function hashRecoveryCode(code) {
+  return crypto.createHash('sha256').update('riverospay_recovery_salt_' + code.toUpperCase()).digest('hex');
+}
+
+// código de recuperación tipo XXXX-XXXX-XXXX (sin 0/O/1/I para evitar confusiones al copiarlo a mano)
+function newRecoveryCode() {
+  const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const grupo = () => Array.from({ length: 4 }, () => abc[Math.floor(Math.random() * abc.length)]).join('');
+  return `${grupo()}-${grupo()}-${grupo()}`;
+}
+
+module.exports = {
+  hashPassword, newId, newShareCode,
+  USERNAME_REGEX, PASSWORD_REGEX,
+  hashRecoveryCode, newRecoveryCode
+};

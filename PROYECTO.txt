@@ -1,0 +1,143 @@
+TODO A CONTINUACIÓN FUE ESCRITO Y PENSADO POR:
+riverojsx - CREADOR OFICIAL DE ESTE PORYECTO.
+
+RIVEROSAPAY — App de organización laboral (JEFE/EMPLEADO)
+=============================================================
+
+ESTADO: Actualmente sigue siendo un PROTIPO.
+NO es la versión final aún.
+NO OMITIR: Riverosapay es una app diseñada en su versión inicial beta 100% por herraminetas gratuitas, en un futuro si llega a crecer se espera poder utilizar servidores privados y dominios propios. la app actualmente puede funcionar bien para su misión y garantizar la seguridad de datos del usuario.
+
+--------------------------------------------------------------
+QUÉ ES RIVEROSAPAY
+--------------------------------------------------------------
+Riverospay es una app de organización personal/laboral pensada
+100% para celular. EL usuario crea su cuenta y elige un perfil:
+
+  · EMPLEADO — organiza su trabajo, estudio y eventos.
+  · JEFE     — verifica en tiempo real el trabajo, estudio y eventos de un empleado.
+
+Esta forma de verificación puede ser mediante añadir JEFE.
+
+--------------------------------------------------------------
+!! (MongoDB Atlas)
+--------------------------------------------------------------
+Antes, las cuentas se guardaban solo en data/db.json dentro del
+propio servidor. En el plan gratuito de Render ese archivo se
+puede perder cada vez que el servicio se reinicia (por eso las
+cuentas "desaparecían" al entrar desde otro celular).
+
+Ahora el backend soporta MongoDB Atlas (gratis) para que la
+información persista de verdad entre dispositivos.
+
+--------------------------------------------------------------
+AJUSTES DE ESTA ACTUALIZACIÓN
+--------------------------------------------------------------
+- Persistencia real vía MongoDB Atlas (ver arriba).
+- Corregido el scroll: la pestaña ESTUDIO (y el resto de la
+  app) ahora desliza correctamente hacia abajo.
+- TRABAJO: ahora solo el JEFE puede marcar "Día pagado / no
+  pagado" y poner el Valor del día, cuando está verificando a
+  un empleado. El EMPLEADO ve su propio estado en solo lectura.
+- El JEFE, mientras verifica a un empleado, también puede:
+    · Ver su ESTUDIO (horario semanal) y sus EVENTO.
+    · Añadirle un TRABAJO directamente.
+  Todo esto con sub-pestañas (Trabajo / Estudio / Evento)
+  dentro de la vista de verificación, en tiempo real.
+- ESTUDIO (EMPLEADO): "Actividades pendientes" ahora es
+  funcional — se pueden añadir actividades con nombre, un día
+  relacionado (menú desplegable, opcional) y una nota, marcarlas
+  como hechas o eliminarlas.
+- Menú hamburguesa (EMPLEADO): nueva opción "Notificaciones",
+  donde llegan las solicitudes de verificación de los jefes
+  (con un punto rojo si hay alguna pendiente). Se puede aceptar
+  o rechazar desde ahí, además del aviso emergente en el momento.
+
+--------------------------------------------------------------
+AJUSTES — TANDA 3 (jefe asignado, borrado de trabajo, cuenta)
+--------------------------------------------------------------
+- Al añadir un TRABAJO (desde el perfil EMPLEADO), ahora se
+  puede elegir "¿Añadir jefe?" — un desplegable con los jefes ya
+  verificados (o "No añadir jefe"). Se puede cambiar después
+  desde el detalle del trabajo ("Cambiar").
+- Si un JEFE no tiene ningún trabajo asignado a su nombre en un
+  empleado, ve todos los trabajos de ese empleado como tarjetas
+  de solo lectura (lugar y horario) dentro de EVENTO, sin poder
+  modificarlos — pero sí puede añadir trabajos nuevos (quedan
+  asignados a él automáticamente). Los trabajos que sí tiene
+  asignados los ve y edita normalmente en TRABAJO.
+- Reglas para ELIMINAR un trabajo:
+    · El JEFE siempre puede borrarlo directo (esté pagado o no).
+    · El EMPLEADO lo borra directo si está PAGADO, o si no tiene
+      ningún jefe asignado.
+    · Si el EMPLEADO quiere borrar uno NO pagado con jefe
+      asignado, queda "pendiente" hasta que el JEFE lo confirme
+      o lo rechace (se avisa por notificación en ambos casos).
+  El borrado es real: se quita del array antes de guardar, así
+  que no queda ocupando espacio en MongoDB.
+- Nuevo botón "Eliminar cuenta" dentro de "Tu perfil". Pide
+  confirmar la contraseña antes de borrar. Al eliminar una
+  cuenta EMPLEADO se borra en cascada todo lo suyo (trabajos,
+  estudio, eventos, notificaciones, verificaciones). Al eliminar
+  una cuenta JEFE se limpian sus verificaciones y los trabajos
+  que tenía asignados quedan sin jefe (no se tocan los datos del
+  empleado).
+
+--------------------------------------------------------------
+AJUSTES — TANDA 2 (asistente de bienvenida)
+--------------------------------------------------------------
+- Después de elegir el perfil, ahora hay un asistente paso a
+  paso antes de entrar al menú:
+    EMPLEADO → ¿Eres estudiante? (Sí/Omitir) → Configurar
+    nombre (Sí/Omitir) → ¿Recibir notificaciones? (Sí/No) → Menú
+    JEFE → Configurar nombre (Sí/Omitir) → ¿Recibir
+    notificaciones? (Sí/No) → Menú
+- Si se responde "Omitir" en ¿Eres estudiante?, la pestaña
+  ESTUDIO no aparece (ni para el empleado ni para el jefe que lo
+  verifique). Las cuentas creadas antes de este cambio siguen
+  viendo Estudio normalmente (no se les pregunta retroactivo).
+- Si se responde "No" en ¿Recibir notificaciones?, no aparece la
+  tarjeta emergente de solicitud ni los avisos flotantes — pero
+  el punto rojo y la ventana de Notificaciones siguen disponibles
+  para revisar cuando quiera.
+
+--------------------------------------------------------------
+AJUSTES — TANDA 1 (login seguro, nombre, perfil, notificaciones)
+--------------------------------------------------------------
+- LOGIN más seguro: usuario de 5 a 10 letras minúsculas (sin
+  números ni símbolos); contraseña de 6 a 12 caracteres (letras
+  y números).
+- Al crear la cuenta se genera un CÓDIGO DE RECUPERACIÓN único
+  (tipo XXXX-XXXX-XXXX). Se muestra UNA sola vez, hay que
+  guardarlo — es la única forma de recuperar el acceso si se
+  olvida la contraseña (no hay email/SMS conectado todavía).
+  En el login hay un enlace "¿Olvidaste tu contraseña?" que pide
+  usuario + código de recuperación + contraseña nueva.
+- Nuevo paso "Configurar nombre" al crear la cuenta (opcional):
+  nombre y apellido en un solo campo con un único espacio. Se
+  muestra en mayúsculas arriba del menú; si no se configura, se
+  muestra el usuario de login en mayúsculas. También se puede
+  configurar después desde el perfil.
+- Nueva ventana de "Tu perfil" al tocar el avatar (arriba a la
+  derecha): foto tipo avatar, nombre, rol (EMPLEADO/JEFE) e ID
+  (usuario de login).
+- Notificaciones con mensajes específicos por acción del jefe:
+  "JEFE" añadió un nuevo trabajo "(lugar)" / "JEFE" pagó-abonó
+  tu trabajo "(lugar)" / "JEFE ha sido configurado" — además de
+  las solicitudes de verificación (Aceptar/Rechazar).
+- Nuevo botón "Información" en el menú hamburguesa: pantalla con
+  "Desarrollado por riverojsx" y "Versión 1.0 BETA".
+- Corregido: la app ahora abre en pantalla completa (modo
+  standalone) al añadirla a la pantalla de inicio, sin la barra
+  con el ícono y el nombre metiéndose arriba.
+
+--------------------------------------------------------------
+ARQUITECTURA / STACK
+--------------------------------------------------------------
+- Backend: Node.js + Express + Socket.IO (server.js)
+- Persistencia: MongoDB Atlas si hay MONGODB_URI configurada;
+  si no, archivo data/db.json en el servidor (db.js).
+- Frontend: HTML/CSS/JS puro, sin frameworks (public/).
+- Tiempo real: cada empleado tiene una "sala" de Socket.IO para
+  trabajo, estudio y eventos; el Jefe se une a esa sala solo
+  cuando fue verificado, y recibe cada cambio al instante.
