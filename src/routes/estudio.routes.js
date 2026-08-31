@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.get('/:empleadoId', ah(estudio.obtenerMaterias));
 router.post('/:empleadoId', ah(estudio.crearMateria));
+router.delete('/materias/:materiaId', ah(estudio.eliminarMateria));
 
 router.get('/:empleadoId/actividades', ah(estudio.obtenerActividades));
 router.post('/:empleadoId/actividades', ah(estudio.crearActividad));
