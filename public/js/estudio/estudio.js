@@ -13,7 +13,11 @@ function estudioGridHTML(materias, editable) {
         ${editable ? `<button class="day-add" onclick="openAddMateria('${dia}')">${ICONS.plus}</button>` : ''}
       </div>
       ${items.length
-        ? items.map(m => `<div class="materia-row"><span class="materia-nombre">${escapeHtml(m.nombre)}</span><span class="materia-hora">${m.horaInicio} – ${m.horaFin}</span></div>`).join('')
+        ? items.map(m => `<div class="materia-row">
+            <span class="materia-nombre">${escapeHtml(m.nombre)}</span>
+            <span class="materia-hora">${m.horaInicio} – ${m.horaFin}</span>
+            ${editable ? `<button class="materia-del" onclick="eliminarMateria('${m.id}')" title="Eliminar clase" aria-label="Eliminar clase">${ICONS.trash}</button>` : ''}
+          </div>`).join('')
         : `<p class="day-empty">Sin clases</p>`}
     </div>`;
   }).join('');
@@ -53,6 +57,21 @@ async function submitMateria(dia) {
     toast('Materia añadida');
     loadEstudio();
   } catch (ex) { err.textContent = ex.message; }
+}
+
+async function eliminarMateria(id) {
+  const materia = (STATE.estudio || []).find(m => m.id === id);
+  const nombre = materia ? materia.nombre : 'esta clase';
+  if (!confirm(`¿Eliminar "${nombre}" del horario?\n\nEsta acción borrará la clase de forma permanente.`)) return;
+
+  try {
+    await api.delete(`/api/estudio/materias/${id}`);
+    STATE.estudio = (STATE.estudio || []).filter(m => m.id !== id);
+    renderEstudio();
+    toast('Clase eliminada');
+  } catch (ex) {
+    toast(ex.message);
+  }
 }
 
 /* ---- actividades pendientes (con menú desplegable de día) ---- */
