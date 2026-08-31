@@ -19,6 +19,16 @@ async function crearMateria(req, res) {
   res.json(materia);
 }
 
+async function eliminarMateria(req, res) {
+  const materia = estudio.buscarMateria(req.params.materiaId);
+  if (!materia) return res.status(404).json({ error: 'Materia no encontrada.' });
+  const empleadoId = materia.empleadoId;
+  estudio.eliminarMateria(materia.id);
+  await save();
+  estudio.broadcast(empleadoId);
+  res.json({ ok: true });
+}
+
 /* ---- actividades pendientes (dentro de Estudio) ---- */
 
 async function obtenerActividades(req, res) {
@@ -59,6 +69,6 @@ async function eliminarActividad(req, res) {
 }
 
 module.exports = {
-  obtenerMaterias, crearMateria,
+  obtenerMaterias, crearMateria, eliminarMateria,
   obtenerActividades, crearActividad, actualizarActividad, eliminarActividad
 };
