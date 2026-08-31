@@ -1,5 +1,5 @@
 /* ============================================================
-   db.js — persistencia híbrida.
+   src/config/db.js — persistencia híbrida.
 
    Si existe la variable de entorno MONGODB_URI, todo se guarda
    en MongoDB Atlas (persiste de verdad entre despliegues y
@@ -14,7 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, 'data', 'db.json');
+const DB_PATH = path.join(__dirname, '..', '..', 'data', 'db.json');
 const MONGODB_URI = process.env.MONGODB_URI || '';
 const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'riverospay';
 
@@ -31,7 +31,7 @@ const EMPTY_DB = {
 };
 
 // objeto ESTABLE: nunca se reasigna, solo se muta por dentro,
-// para que server.js pueda seguir usando `db.users.push(...)` etc.
+// para que el resto de la app pueda seguir usando `db.users.push(...)` etc.
 const db = JSON.parse(JSON.stringify(EMPTY_DB));
 
 let mongoCollection = null;

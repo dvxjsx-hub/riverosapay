@@ -1,23 +1,113 @@
 TODO A CONTINUACIÓN FUE ESCRITO Y PENSADO POR:
-riverojsx - CREADOR OFICIAL DE ESTE PORYECTO.
+riverojsx - CREADOR OFICIAL DE ESTE PROYECTO.
 
 RIVEROSAPAY — App de organización laboral (JEFE/EMPLEADO)
 =============================================================
 
-ESTADO: Actualmente sigue siendo un PROTIPO.
-NO es la versión final aún.
-NO OMITIR: Riverosapay es una app diseñada en su versión inicial beta 100% por herraminetas gratuitas, en un futuro si llega a crecer se espera poder utilizar servidores privados y dominios propios. la app actualmente puede funcionar bien para su misión y garantizar la seguridad de datos del usuario.
+ESTADO: Actualmente sigue siendo un PROTOTIPO.
+NO es la versión final aún (todavía no dice "LISTO" — cuando lo
+diga, será la versión 1.0).
+NO OMITIR: Riverosapay es una app diseñada en su versión inicial
+beta 100% con herramientas gratuitas. En un futuro, si llega a
+crecer, se espera poder utilizar servidores privados y dominios
+propios. La app actualmente puede funcionar bien para su misión
+y garantizar la seguridad de los datos del usuario.
 
 --------------------------------------------------------------
 QUÉ ES RIVEROSAPAY
 --------------------------------------------------------------
-Riverospay es una app de organización personal/laboral pensada
-100% para celular. EL usuario crea su cuenta y elige un perfil:
+Riverosapay es una app de organización personal/laboral pensada
+100% para celular, para administrar mejor la relación entre un
+JEFE y un EMPLEADO en el trabajo.
+
+El usuario crea su cuenta y elige un perfil:
 
   · EMPLEADO — organiza su trabajo, estudio y eventos.
-  · JEFE     — verifica en tiempo real el trabajo, estudio y eventos de un empleado.
+  · JEFE     — verifica en tiempo real el trabajo, estudio y
+               eventos de un empleado, y puede añadirle turnos.
 
-Esta forma de verificación puede ser mediante añadir JEFE.
+La conexión entre ambos se hace mediante un código de
+verificación (ver paso a paso más abajo), no hace falta que se
+sigan por ninguna red social ni compartan más datos que ese
+código.
+
+--------------------------------------------------------------
+CÓMO SE USA — PASO A PASO
+--------------------------------------------------------------
+
+1) CREAR CUENTA
+   - Usuario: 5 a 10 letras minúsculas, sin números ni símbolos.
+   - Contraseña: 6 a 12 caracteres (letras y números).
+   - Al crear la cuenta se muestra UNA sola vez un código de
+     recuperación (tipo XXXX-XXXX-XXXX). Hay que guardarlo: es
+     la única forma de recuperar el acceso si se olvida la
+     contraseña (todavía no hay recuperación por email/SMS).
+
+2) ELEGIR PERFIL
+   - Se elige una sola vez: EMPLEADO o JEFE (no se puede
+     cambiar después desde la app).
+
+3) ASISTENTE DE BIENVENIDA
+   - EMPLEADO: ¿Eres estudiante? (Sí/Omitir) → Configurar
+     nombre (Sí/Omitir) → ¿Recibir notificaciones? (Sí/No) → Menú.
+   - JEFE: Configurar nombre (Sí/Omitir) → ¿Recibir
+     notificaciones? (Sí/No) → Menú.
+   - Si se omite "¿Eres estudiante?", la pestaña ESTUDIO no
+     aparece (ni al empleado ni al jefe que lo verifique).
+
+4A) SI SOS EMPLEADO
+   - En TRABAJO: cargás tus turnos (lugar, día, horario,
+     descripción) y opcionalmente elegís a qué JEFE ya
+     verificado queda asignado ese trabajo ("¿Añadir jefe?").
+   - En ESTUDIO (si sos estudiante): cargás tu horario de
+     materias y tus "Actividades pendientes" (con nombre, día
+     opcional y nota; se marcan como hechas o se eliminan).
+   - En EVENTO: registrás eventos puntuales (lugar, día, hora,
+     gasto y descripción).
+   - Para conectar a un JEFE: desde tu perfil compartís tu
+     CÓDIGO (8 dígitos). El jefe lo ingresa desde su cuenta y a
+     vos te llega una solicitud (podés Aceptar o Rechazar) en el
+     menú "Notificaciones" o como aviso emergente.
+   - Una vez aceptado, ese JEFE puede ver y hasta añadirte
+     trabajos, y sos vos (o el jefe, según el caso) quien marca
+     "pagado" y el valor del día.
+
+4B) SI SOS JEFE
+   - Desde tu cuenta, ingresás el CÓDIGO de 8 dígitos que te
+     pasó tu empleado para enviarle la solicitud de
+     verificación.
+   - Cuando el empleado la acepta, podés ver en tiempo real su
+     TRABAJO, ESTUDIO y EVENTO (sub-pestañas dentro de la vista
+     de verificación).
+   - Podés marcar un trabajo como pagado y poner su valor, y
+     también podés añadirle trabajos nuevos directamente (quedan
+     asignados a vos).
+   - En HISTORIAL vas viendo todos los empleados que ya
+     verificaste.
+
+5) NOTIFICACIONES
+   Le llegan al EMPLEADO cuando su JEFE añade un trabajo, lo
+   marca como pagado, lo elimina, o cuando se termina de
+   configurar la verificación. Si el empleado eligió "No" en
+   "¿Recibir notificaciones?", no ve los avisos emergentes, pero
+   sí puede revisar todo desde el menú "Notificaciones" (con
+   punto rojo si hay algo pendiente).
+
+6) ELIMINAR UN TRABAJO
+   - El JEFE siempre puede borrarlo directo (esté pagado o no).
+   - El EMPLEADO lo borra directo si está PAGADO, o si no tiene
+     ningún jefe asignado.
+   - Si el EMPLEADO quiere borrar uno NO pagado con jefe
+     asignado, queda "pendiente" hasta que el JEFE lo confirme o
+     lo rechace (avisa por notificación en ambos casos).
+
+7) ELIMINAR CUENTA
+   Desde "Tu perfil" → "Eliminar cuenta", pide confirmar la
+   contraseña. Si sos EMPLEADO se borra en cascada todo lo tuyo
+   (trabajos, estudio, eventos, notificaciones, verificaciones).
+   Si sos JEFE se limpian tus verificaciones y los trabajos que
+   tenías asignados quedan sin jefe (no se tocan los datos del
+   empleado).
 
 --------------------------------------------------------------
 !! (MongoDB Atlas)
@@ -66,32 +156,17 @@ AJUSTES — TANDA 3 (jefe asignado, borrado de trabajo, cuenta)
   modificarlos — pero sí puede añadir trabajos nuevos (quedan
   asignados a él automáticamente). Los trabajos que sí tiene
   asignados los ve y edita normalmente en TRABAJO.
-- Reglas para ELIMINAR un trabajo:
-    · El JEFE siempre puede borrarlo directo (esté pagado o no).
-    · El EMPLEADO lo borra directo si está PAGADO, o si no tiene
-      ningún jefe asignado.
-    · Si el EMPLEADO quiere borrar uno NO pagado con jefe
-      asignado, queda "pendiente" hasta que el JEFE lo confirme
-      o lo rechace (se avisa por notificación en ambos casos).
-  El borrado es real: se quita del array antes de guardar, así
-  que no queda ocupando espacio en MongoDB.
-- Nuevo botón "Eliminar cuenta" dentro de "Tu perfil". Pide
-  confirmar la contraseña antes de borrar. Al eliminar una
-  cuenta EMPLEADO se borra en cascada todo lo suyo (trabajos,
-  estudio, eventos, notificaciones, verificaciones). Al eliminar
-  una cuenta JEFE se limpian sus verificaciones y los trabajos
-  que tenía asignados quedan sin jefe (no se tocan los datos del
-  empleado).
+- Reglas para ELIMINAR un trabajo: ver paso 6 del "CÓMO SE USA"
+  más arriba. El borrado es real: se quita del array antes de
+  guardar, así que no queda ocupando espacio en MongoDB.
+- Nuevo botón "Eliminar cuenta" dentro de "Tu perfil" (ver paso
+  7 del "CÓMO SE USA" más arriba).
 
 --------------------------------------------------------------
 AJUSTES — TANDA 2 (asistente de bienvenida)
 --------------------------------------------------------------
 - Después de elegir el perfil, ahora hay un asistente paso a
-  paso antes de entrar al menú:
-    EMPLEADO → ¿Eres estudiante? (Sí/Omitir) → Configurar
-    nombre (Sí/Omitir) → ¿Recibir notificaciones? (Sí/No) → Menú
-    JEFE → Configurar nombre (Sí/Omitir) → ¿Recibir
-    notificaciones? (Sí/No) → Menú
+  paso antes de entrar al menú (ver paso 3 del "CÓMO SE USA").
 - Si se responde "Omitir" en ¿Eres estudiante?, la pestaña
   ESTUDIO no aparece (ni para el empleado ni para el jefe que lo
   verifique). Las cuentas creadas antes de este cambio siguen
@@ -107,12 +182,8 @@ AJUSTES — TANDA 1 (login seguro, nombre, perfil, notificaciones)
 - LOGIN más seguro: usuario de 5 a 10 letras minúsculas (sin
   números ni símbolos); contraseña de 6 a 12 caracteres (letras
   y números).
-- Al crear la cuenta se genera un CÓDIGO DE RECUPERACIÓN único
-  (tipo XXXX-XXXX-XXXX). Se muestra UNA sola vez, hay que
-  guardarlo — es la única forma de recuperar el acceso si se
-  olvida la contraseña (no hay email/SMS conectado todavía).
-  En el login hay un enlace "¿Olvidaste tu contraseña?" que pide
-  usuario + código de recuperación + contraseña nueva.
+- Código de recuperación único al crear la cuenta (ver paso 1
+  del "CÓMO SE USA" más arriba).
 - Nuevo paso "Configurar nombre" al crear la cuenta (opcional):
   nombre y apellido en un solo campo con un único espacio. Se
   muestra en mayúsculas arriba del menú; si no se configura, se
@@ -132,11 +203,12 @@ AJUSTES — TANDA 1 (login seguro, nombre, perfil, notificaciones)
   con el ícono y el nombre metiéndose arriba.
 
 --------------------------------------------------------------
-ARQUITECTURA / STACK
+ARQUITECTURA / STACK (resumen — el detalle técnico está en README.md)
 --------------------------------------------------------------
-- Backend: Node.js + Express + Socket.IO (server.js)
+- Backend: Node.js + Express + Socket.IO, organizado por
+  dominio (routes / controllers / models) dentro de src/.
 - Persistencia: MongoDB Atlas si hay MONGODB_URI configurada;
-  si no, archivo data/db.json en el servidor (db.js).
+  si no, archivo data/db.json en el servidor.
 - Frontend: HTML/CSS/JS puro, sin frameworks (public/).
 - Tiempo real: cada empleado tiene una "sala" de Socket.IO para
   trabajo, estudio y eventos; el Jefe se une a esa sala solo
