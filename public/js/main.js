@@ -25,6 +25,35 @@ function setupDrawer() {
   $('#drawer-notificaciones').addEventListener('click', () => { closeDrawer(); openNotificaciones(); });
   $('#drawer-verificar').addEventListener('click', () => { closeDrawer(); openVerificar(); });
   $('#drawer-informacion').addEventListener('click', () => { closeDrawer(); openInformacion(); });
+
+  // Cerrar sesión: solo termina la sesión local. No borra datos del servidor/MongoDB.
+  $('#drawer-logout').addEventListener('click', () => {
+    closeDrawer();
+    if (STATE.socket) {
+      STATE.socket.disconnect();
+      STATE.socket = null;
+    }
+
+    STATE.user = null;
+    STATE.viewMode = 'empleado';
+    STATE.activeTab = null;
+    STATE.trabajo = { lugares: [], turnos: [] };
+    STATE.estudio = [];
+    STATE.actividades = [];
+    STATE.eventos = [];
+    STATE.historial = [];
+    STATE.notificaciones = [];
+    STATE.jefeView = null;
+    STATE.pendingRequest = null;
+
+    // Se conserva riverospay_last_user para que el usuario pueda volver a entrar
+    // cómodamente. Los datos de la cuenta siguen íntegros en MongoDB.
+    showScreen('screen-auth');
+    setAuthMode('login');
+    const lastUser = localStorage.getItem('riverospay_last_user');
+    if (lastUser) $('#log-user').value = lastUser;
+    $('#log-pass').value = '';
+  });
 }
 
 /* ================= PERFIL (wiring) ================= */
