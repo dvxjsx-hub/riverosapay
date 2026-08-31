@@ -15,6 +15,14 @@ function crearMateria(materia) {
   db.materias.push(materia);
 }
 
+function buscarMateria(id) {
+  return db.materias.find(m => m.id === id);
+}
+
+function eliminarMateria(id) {
+  db.materias = db.materias.filter(m => m.id !== id);
+}
+
 function actividadesDe(empleadoId) {
   return db.actividades.filter(a => a.empleadoId === empleadoId);
 }
@@ -32,6 +40,6 @@ function eliminarActividad(id) {
 }
 
 module.exports = {
-  broadcast, materiasDe, crearMateria,
+  broadcast, materiasDe, crearMateria, buscarMateria, eliminarMateria,
   actividadesDe, buscarActividad, crearActividad, eliminarActividad
 };
