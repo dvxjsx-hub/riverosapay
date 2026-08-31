@@ -16,7 +16,7 @@ function estudioGridHTML(materias, editable) {
         ? items.map(m => `<div class="materia-row">
             <span class="materia-nombre">${escapeHtml(m.nombre)}</span>
             <span class="materia-hora">${m.horaInicio} – ${m.horaFin}</span>
-            ${editable ? `<button class="materia-del" onclick="eliminarMateria('${m.id}')" title="Eliminar clase" aria-label="Eliminar clase">${ICONS.trash}</button>` : ''}
+            ${editable ? `<button class="actividad-del" onclick="eliminarMateria('${m.id}')" title="Eliminar clase" aria-label="Eliminar clase">${ICONS.trash}</button>` : ''}
           </div>`).join('')
         : `<p class="day-empty">Sin clases</p>`}
     </div>`;
