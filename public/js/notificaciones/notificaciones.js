@@ -1,32 +1,15 @@
 /* ============================================================
-   Riverospay · COMPARTIR CODIGO Y NOTIFICACIONES (empleado)
-   Extraído de app.js (refactor de estructura, sin cambios de lógica)
+   Riverospay · NOTIFICACIONES
+   Cada modo conserva sus notificaciones porque pertenecen a la
+   misma cuenta, pero el contenido puede cambiar según el modo.
    ============================================================ */
 
-/* ================= COMPARTIR (empleado) ================= */
-function openCompartir() {
-  openModal('Compartir código', `
-    <div class="share-code">${STATE.user.shareCode}</div>
-    <p class="muted" style="font-size:12.5px;text-align:center;margin:0;">Comparte este código de 8 dígitos con tu jefe para que pueda verificarte en tiempo real.</p>
-    <button class="btn-primary" onclick="copiarCodigo()">Copiar código</button>
-  `);
-}
-
-function copiarCodigo() {
-  const code = STATE.user.shareCode;
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(code).then(() => toast('Código copiado')).catch(() => toast('Copia el código manualmente: ' + code));
-  } else {
-    toast('Copia el código manualmente: ' + code);
-  }
-}
-
-/* ================= NOTIFICACIONES (empleado) ================= */
 function updateNotifBadge() {
   const hayAlgoPendiente = (STATE.notificaciones || []).some(n =>
     (n.tipo === 'solicitud' && n.estado === 'pendiente') || (n.tipo !== 'solicitud' && !n.leida)
   );
-  $('#notif-dot').classList.toggle('hidden', !hayAlgoPendiente);
+  const dot = $('#notif-dot');
+  if (dot) dot.classList.toggle('hidden', !hayAlgoPendiente);
 }
 
 async function loadNotificaciones() {
@@ -36,14 +19,15 @@ async function loadNotificaciones() {
 }
 
 function notifTextoHTML(n) {
-  const jefe = `<b>${escapeHtml(n.jefeUsername || 'JEFE')}</b>`;
-  if (n.tipo === 'solicitud') return `${jefe} quiere verificar tu información.`;
-  if (n.tipo === 'trabajo_añadido') return `${jefe} añadió un nuevo trabajo "${escapeHtml(n.lugar || '')}"`;
-  if (n.tipo === 'trabajo_pagado') return `${jefe} pagó/abonó tu trabajo "${escapeHtml(n.lugar || '')}"`;
-  if (n.tipo === 'jefe_configurado') return `${jefe} ha sido configurado.`;
-  if (n.tipo === 'trabajo_eliminado') return `${jefe} eliminó el trabajo "${escapeHtml(n.lugar || '')}"`;
-  if (n.tipo === 'trabajo_eliminacion_rechazada') return `${jefe} rechazó tu solicitud para eliminar un trabajo.`;
-  return jefe;
+  const nombre = n.empleadoNombre || n.empleadoUsername || n.jefeUsername || 'Usuario';
+  if (n.tipo === 'solicitud') return `<b>${escapeHtml(n.jefeUsername || 'JEFE')}</b> quiere verificar tu información.`;
+  if (n.tipo === 'jefe_asignado_trabajo') return `<b>${escapeHtml(nombre)}</b> te asignó como jefe en "${escapeHtml(n.lugar || 'un trabajo')}"${n.fechaTrabajo ? ` para el ${escapeHtml(n.fechaTrabajo)}` : ''}.`;
+  if (n.tipo === 'trabajo_añadido') return `<b>${escapeHtml(n.jefeUsername || 'Tu jefe')}</b> añadió un nuevo trabajo "${escapeHtml(n.lugar || '')}".`;
+  if (n.tipo === 'trabajo_pagado') return `<b>${escapeHtml(n.jefeUsername || 'Tu jefe')}</b> pagó/abonó tu trabajo "${escapeHtml(n.lugar || '')}".`;
+  if (n.tipo === 'jefe_configurado') return `<b>${escapeHtml(n.jefeUsername || 'JEFE')}</b> ha sido configurado.`;
+  if (n.tipo === 'trabajo_eliminado') return `<b>${escapeHtml(n.jefeUsername || 'Tu jefe')}</b> eliminó el trabajo "${escapeHtml(n.lugar || '')}".`;
+  if (n.tipo === 'trabajo_eliminacion_rechazada') return `<b>${escapeHtml(n.jefeUsername || 'Tu jefe')}</b> rechazó tu solicitud para eliminar un trabajo.`;
+  return escapeHtml(nombre);
 }
 
 async function openNotificaciones() {
@@ -66,10 +50,7 @@ function renderNotificacionesModal() {
       <span class="notif-text">${notifTextoHTML(n)}</span>
       <span class="notif-fecha">${formatFecha(n.fecha)}</span>
       ${n.tipo === 'solicitud' && n.estado === 'pendiente'
-        ? `<div class="notif-actions">
-             <button class="btn-ghost-danger" onclick="responderSolicitudId('${n.id}','rechazar')">Rechazar</button>
-             <button class="btn-primary" onclick="responderSolicitudId('${n.id}','aceptar')">Aceptar</button>
-           </div>`
+        ? `<div class="notif-actions"><button class="btn-ghost-danger" onclick="responderSolicitudId('${n.id}','rechazar')">Rechazar</button><button class="btn-primary" onclick="responderSolicitudId('${n.id}','aceptar')">Aceptar</button></div>`
         : (n.tipo === 'solicitud' ? `<span class="notif-badge ${n.estado}">Rechazada</span>` : '')}
     </div>`).join('') : emptyCardHTML('NOTIFICACIONES', 'No tienes notificaciones por ahora.', 'historial');
   openModal('Notificaciones', html);
@@ -85,7 +66,6 @@ async function responderSolicitudId(id, accion) {
   } catch (ex) { toast(ex.message); }
 }
 
-/* ================= SOLICITUD EN VIVO (empleado recibe) ================= */
 function showRequestCard(solicitud) {
   STATE.pendingRequest = solicitud;
   $('#request-text').textContent = `${solicitud.jefeUsername} quiere verificar tu información en tiempo real.`;
