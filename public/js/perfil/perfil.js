@@ -63,7 +63,7 @@ function actualizarHeaderUsuario() {
 
 function openPerfil() {
   const modo = modoActualUsuario();
-  const modoTexto = modo === 'jefe' ? 'MODO JEFE' : 'MODO EMPLEADO';
+  const modoTexto = modo === 'jefe' ? 'MODO BOSS' : 'MODO EMPLEADO';
 
   openModal('Tu perfil', `
     <div style="display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;">
