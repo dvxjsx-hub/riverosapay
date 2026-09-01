@@ -19,15 +19,16 @@ const MONGODB_URI = process.env.MONGODB_URI || '';
 const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'riverospay';
 
 const EMPTY_DB = {
-  users: [],         // { id, username, password(hash), role, shareCode }
-  turnos: [],         // { id, empleadoId, lugarId, dia, horaInicio, horaFin, descripcion, pagado, valor }
-  lugares: [],        // { id, empleadoId, nombre }
-  materias: [],       // { id, empleadoId, dia, nombre, horaInicio, horaFin }
-  actividades: [],    // { id, empleadoId, dia, nombre, nota, hecha }
-  eventos: [],         // { id, empleadoId, lugar, dia, hora, gastoMonto, gastoDescripcion, descripcion }
-  joinRequests: [],    // { id, jefeId, jefeUsername, empleadoId, estado, fecha }
-  links: [],           // { id, jefeId, jefeUsername, empleadoId, empleadoUsername, fecha }
-  notificaciones: []   // { id, empleadoId, tipo, jefeUsername, lugar, fecha, leida }
+  users: [],         // { id, username, password(hash), role, shareCode, modoActual, codigoAmistad }
+  amistades: [],     // { id, usuarioId, amistadId, amistadUsername, fecha }
+  turnos: [],        // { id, empleadoId, lugarId, dia, horaInicio, horaFin, descripcion, pagado, valor }
+  lugares: [],       // { id, empleadoId, nombre }
+  materias: [],      // { id, empleadoId, dia, nombre, horaInicio, horaFin }
+  actividades: [],   // { id, empleadoId, dia, nombre, nota, hecha }
+  eventos: [],       // { id, empleadoId, lugar, dia, hora, gastoMonto, gastoDescripcion, descripcion }
+  joinRequests: [],  // legado: solicitudes de verificación antiguas
+  links: [],         // legado: vínculos jefe-empleado antiguos
+  notificaciones: [] // { id, empleadoId, tipo, jefeUsername, lugar, fecha, leida }
 };
 
 // objeto ESTABLE: nunca se reasigna, solo se muta por dentro,
