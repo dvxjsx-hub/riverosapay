@@ -9,7 +9,17 @@ function newId(prefix) {
   return prefix + '_' + crypto.randomBytes(6).toString('hex');
 }
 
-// código de compartir: 8 dígitos, único y fijo por cuenta de empleado
+// Código de amistad: 8 dígitos, único y fijo por cuenta.
+// Sustituye al antiguo código de compartir jefe↔empleado.
+function newFriendCode(db) {
+  let code;
+  do {
+    code = String(Math.floor(10000000 + Math.random() * 90000000));
+  } while (db.users.some(u => u.codigoAmistad === code));
+  return code;
+}
+
+// Compatibilidad temporal con cuentas antiguas.
 function newShareCode(db) {
   let code;
   do {
@@ -19,8 +29,8 @@ function newShareCode(db) {
 }
 
 // reglas de LOGIN seguro
-const USERNAME_REGEX = /^[a-z]{5,10}$/;      // 5-10 caracteres, solo minúsculas, sin números ni símbolos
-const PASSWORD_REGEX = /^[A-Za-z0-9]{6,12}$/; // 6-12 caracteres, letras (mayús/minús) y números
+const USERNAME_REGEX = /^[a-z]{5,10}$/;
+const PASSWORD_REGEX = /^[A-Za-z0-9]{6,12}$/;
 
 // hash del código de recuperación (sal distinta a la de la contraseña)
 function hashRecoveryCode(code) {
@@ -35,7 +45,7 @@ function newRecoveryCode() {
 }
 
 module.exports = {
-  hashPassword, newId, newShareCode,
+  hashPassword, newId, newShareCode, newFriendCode,
   USERNAME_REGEX, PASSWORD_REGEX,
   hashRecoveryCode, newRecoveryCode
 };
