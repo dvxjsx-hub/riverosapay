@@ -5,6 +5,7 @@ const ah = require('../middleware/asyncHandler');
 const router = express.Router();
 
 router.get('/mis-jefes/:empleadoId', ah(trabajo.obtenerMisJefes));
+router.get('/trabajo/jefe/:jefeId', ah(trabajo.obtenerTrabajosComoJefe));
 
 router.get('/trabajo/:empleadoId', ah(trabajo.obtenerSnapshot));
 router.post('/trabajo/:empleadoId/turnos', ah(trabajo.crearTurno));
