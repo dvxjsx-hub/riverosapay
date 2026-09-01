@@ -1,7 +1,7 @@
 const { db, save } = require('../config/db');
 const usuarios = require('../models/usuarios.model');
 const {
-  hashPassword, newId, newShareCode,
+  hashPassword, newId, newShareCode, newFriendCode,
   USERNAME_REGEX, PASSWORD_REGEX,
   hashRecoveryCode, newRecoveryCode
 } = require('../utils/utils');
@@ -21,9 +21,9 @@ async function registrar(req, res) {
   const recoveryCode = newRecoveryCode();
   const user = {
     id: newId('u'), username: uname, password: hashPassword(password),
-    // `role` se conserva temporalmente solo por compatibilidad con datos y controladores existentes.
-    // La interfaz y la cuenta nueva usan `modoActual` como fuente de verdad del modo activo.
+    // role/shareCode antiguos se conservan temporalmente para no romper datos existentes.
     role: 'empleado', shareCode: newShareCode(db), modoActual: 'empleado',
+    codigoAmistad: newFriendCode(db),
     nombreCompleto: null,
     recoveryCodeHash: hashRecoveryCode(recoveryCode)
   };
@@ -70,7 +70,6 @@ async function preferencias(req, res) {
 }
 
 // Cambia el modo visual/operativo de la misma cuenta. La ID nunca cambia.
-// El campo `role` antiguo NO se modifica en esta etapa: otros módulos todavía lo usan como compatibilidad.
 async function cambiarModo(req, res) {
   const { userId, modo } = req.body || {};
   if (!['empleado', 'jefe'].includes(modo)) {
@@ -90,8 +89,6 @@ async function eliminarCuenta(req, res) {
     return res.status(401).json({ error: 'Contraseña incorrecta.' });
   }
 
-  // La cuenta ahora puede usar ambos modos. Al eliminarla, limpiamos ambos lados
-  // de las relaciones antiguas para no dejar referencias huérfanas.
   db.turnos = db.turnos.filter(t => t.empleadoId !== userId);
   db.lugares = db.lugares.filter(l => l.empleadoId !== userId);
   db.materias = db.materias.filter(m => m.empleadoId !== userId);
@@ -100,6 +97,9 @@ async function eliminarCuenta(req, res) {
   db.notificaciones = db.notificaciones.filter(n => n.empleadoId !== userId);
   db.joinRequests = db.joinRequests.filter(r => r.empleadoId !== userId && r.jefeId !== userId);
   db.links = db.links.filter(l => l.empleadoId !== userId && l.jefeId !== userId);
+  if (Array.isArray(db.amistades)) {
+    db.amistades = db.amistades.filter(a => a.usuarioId !== userId && a.amistadId !== userId);
+  }
   db.turnos.forEach(t => {
     if (t.jefeAsignadoId === userId) {
       t.jefeAsignadoId = null;
@@ -121,7 +121,7 @@ async function login(req, res) {
   res.json(usuarios.publicUser(user));
 }
 
-// Endpoint legado: se conserva para no romper cuentas existentes durante la migración.
+// Endpoint legado: se conserva durante la migración de cuentas antiguas.
 async function elegirRol(req, res) {
   const { userId, role } = req.body || {};
   if (!['jefe', 'empleado'].includes(role)) return res.status(400).json({ error: 'Perfil inválido.' });
@@ -131,6 +131,7 @@ async function elegirRol(req, res) {
   user.role = role;
   if (role === 'empleado') user.shareCode = newShareCode(db);
   user.modoActual = role;
+  if (!user.codigoAmistad) user.codigoAmistad = newFriendCode(db);
   await save();
   res.json(usuarios.publicUser(user));
 }
