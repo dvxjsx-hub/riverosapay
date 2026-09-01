@@ -47,8 +47,14 @@ function setupSocket() {
     if (STATE.user.recibirNotificaciones !== false) showRequestCard(solicitud);
   });
 
-  STATE.socket.on('notificaciones:update', () => {
-    if (modoActualUsuario() === 'empleado') loadNotificaciones();
+  // Las notificaciones pertenecen a la misma cuenta, pero pueden llegar
+  // mientras la cuenta esté en cualquiera de sus dos modos.
+  STATE.socket.on('notificaciones:update', async () => {
+    try {
+      await loadNotificaciones();
+    } catch (ex) {
+      console.warn('[riverospay] No se pudieron actualizar las notificaciones en tiempo real.', ex);
+    }
   });
 
   STATE.socket.on('join:result', (payload) => {
