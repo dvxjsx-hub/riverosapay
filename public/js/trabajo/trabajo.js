@@ -1,6 +1,6 @@
 /* ============================================================
    Riverospay · TRABAJO
-   Tanda 3: fechas reales, Horarios/Finalizados, filtros y jefe
+   Tanda 5: finalizados, pagos, borrado y selector
    ============================================================ */
 
 const TRABAJO_VISTAS = { HORARIOS: 'horarios', FINALIZADOS: 'finalizados' };
@@ -84,7 +84,7 @@ function turnoCardHTML(t) {
 }
 
 function renderTrabajo() {
-  const selector = `<button class="trabajo-vista-selector" style="width:100%;display:flex;justify-content:space-between;align-items:center;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius-md);padding:14px 16px;color:var(--green-900);font-family:var(--font-display);font-weight:700;font-size:15px;cursor:pointer;" type="button" onclick="abrirSelectorTrabajo()"><span>${trabajoVistaActual === TRABAJO_VISTAS.HORARIOS ? 'Horarios' : 'Finalizados'}</span><span>⌄</span></button>`;
+  const selector = `<button class="trabajo-vista-selector" style="width:100%;display:flex;justify-content:space-between;align-items:center;background:rgba(21,92,49,.08);border:1.5px solid var(--line);border-radius:var(--radius-md);padding:14px 16px;color:var(--green-900);font-family:var(--font-display);font-weight:700;font-size:15px;cursor:pointer;" type="button" onclick="abrirSelectorTrabajo()"><span>${trabajoVistaActual === TRABAJO_VISTAS.HORARIOS ? 'Horarios' : 'Finalizados'}</span><span>⌄</span></button>`;
   const acciones = `<button class="trabajo-plus" style="width:56px;height:56px;border-radius:50%;border:none;background:var(--green-700);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-card);cursor:pointer;" type="button" onclick="abrirAccionesTrabajo()" aria-label="Acciones de trabajo">${ICONS.plus}</button>`;
   const resumen = trabajoVistaActual === TRABAJO_VISTAS.FINALIZADOS ? `<div class="muted" style="font-size:12px;text-align:center;">${trabajoFiltroPago === 'todos' ? 'Todos los estados de pago' : trabajoFiltroPago === 'pagados' ? 'Solo pagados' : 'Solo no pagados'}</div>` : '';
   $('#content').innerHTML = `<div>${selector}</div>${resumen}${trabajoListHTML(STATE.trabajo)}<div style="display:flex;justify-content:flex-end;margin-top:auto;padding-top:4px;">${acciones}</div>`;
@@ -98,6 +98,7 @@ function cambiarVistaTrabajo(vista) {
   trabajoVistaActual = vista;
   trabajoFiltroJefe = null;
   trabajoFiltroPago = 'todos';
+  trabajoModoBorrado = false;
   closeModal();
   if (STATE.viewMode === 'jefe-ver' && typeof renderJefeView === 'function') {
     renderJefeView();
@@ -153,7 +154,8 @@ async function abrirFiltroJefe() {
   try {
     const data = await api.get(`/api/amistades/${STATE.user.id}`);
     STATE.amistades = data.amistades || [];
-    const ids = new Set((STATE.trabajo.turnos || []).map(t => t.jefeAsignadoId).filter(Boolean));
+    const fuente = STATE.viewMode === 'jefe-ver' ? (STATE.jefeView || { turnos: [] }) : (STATE.trabajo || { turnos: [] });
+    const ids = new Set((fuente.turnos || []).map(t => t.jefeAsignadoId).filter(Boolean));
     const jefes = STATE.amistades.filter(a => ids.has(a.id));
     if (!jefes.length) { openModal('Filtrar por jefe', '<p class="muted">No hay jefes registrados en tus trabajos.</p><button class="btn-secondary" onclick="closeModal()">Cerrar</button>'); return; }
     openModal('Selecciona un jefe', `<button class="btn-secondary" type="button" onclick="aplicarFiltroJefe(null)">Todos los jefes</button>${jefes.map(j => `<button class="btn-secondary" style="margin-top:8px;" type="button" onclick="aplicarFiltroJefe('${j.id}')">${escapeHtml(j.nombreCompleto || j.username)}</button>`).join('')}`);
@@ -195,8 +197,12 @@ async function abrirCambiarJefe(turnoId) {
 
 async function guardarCambioJefe(turnoId) {
   const valor = $('#f-cambiar-jefe').value;
-  try { await api.patch(`/api/trabajo/turnos/${turnoId}`, { jefeAsignadoId: valor || null }); toast('Jefe actualizado'); await loadTrabajo(); openTurnoDetail(turnoId); }
-  catch (ex) { $('#f-cambiar-jefe-error').textContent = ex.message; }
+  try {
+    await api.patch(`/api/trabajo/turnos/${turnoId}`, { jefeAsignadoId: valor || null });
+    toast('Jefe actualizado');
+    if (STATE.viewMode === 'jefe-ver') { await refrescarJefeTrabajo(); renderJefeView(); }
+    else { await loadTrabajo(); openTurnoDetail(turnoId); }
+  } catch (ex) { $('#f-cambiar-jefe-error').textContent = ex.message; }
 }
 
 function pedirConfirmacionEliminar(turnoId) {
