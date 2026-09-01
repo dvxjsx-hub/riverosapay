@@ -1,15 +1,15 @@
 /* ============================================================
    Riverospay · ENTRADA A LA APP Y HOME
-   Extraído de app.js (refactor de estructura, sin cambios de lógica)
    ============================================================ */
 
-/* ---------- ENTRAR A LA APP ---------- */
 function enterApp() {
   actualizarHeaderUsuario();
   configurarMenuPorRol();
   showScreen('screen-app');
 
-  if (STATE.user.role === 'empleado') {
+  const modo = modoActualUsuario();
+
+  if (modo === 'empleado') {
     STATE.viewMode = 'empleado';
     $('#tab-estudio').classList.toggle('hidden', STATE.user.esEstudiante === false);
     $all('.tab').forEach(b => b.classList.remove('active'));
@@ -26,7 +26,7 @@ function enterApp() {
 async function checkPendingRequests() {
   try {
     await loadNotificaciones();
-    if (STATE.user.recibirNotificaciones === false) return; // prefirió no recibir avisos emergentes
+    if (STATE.user.recibirNotificaciones === false) return;
     const pendiente = (STATE.notificaciones || []).find(n => n.estado === 'pendiente');
     if (pendiente) showRequestCard(pendiente);
   } catch (ex) { /* silencioso */ }
@@ -41,7 +41,6 @@ function renderHome() {
     </div>`;
 }
 
-/* ---------- TABS ---------- */
 function setupTabs() {
   $all('.tab').forEach(btn => {
     btn.addEventListener('click', () => {

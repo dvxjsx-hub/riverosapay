@@ -1,9 +1,7 @@
 /* ============================================================
-   Riverospay · PERFIL Y ONBOARDING: nombre, rol, estudiante, notificaciones, eliminar cuenta
-   Extraído de app.js (refactor de estructura, sin cambios de lógica)
+   Riverospay · PERFIL Y ONBOARDING: nombre, modo, estudiante, notificaciones, eliminar cuenta
    ============================================================ */
 
-/* ---------- CONFIGURAR NOMBRE (parte del alta, y editable luego desde el perfil) ---------- */
 function mostrarConfigurarNombre() {
   renderNombreEleccion();
   showScreen('screen-nombre');
@@ -63,21 +61,45 @@ function actualizarHeaderUsuario() {
   $('#app-username').textContent = nombreMostrado();
 }
 
-/* ---------- PERFIL DE USUARIO (tocando el avatar) ---------- */
 function openPerfil() {
-  const rolTexto = STATE.user.role === 'jefe' ? 'JEFE' : 'EMPLEADO';
+  const modo = modoActualUsuario();
+  const modoTexto = modo === 'jefe' ? 'MODO JEFE' : 'MODO EMPLEADO';
+  const siguienteModo = modo === 'jefe' ? 'empleado' : 'jefe';
+  const siguienteTexto = siguienteModo === 'jefe' ? 'Cambiar a modo jefe' : 'Cambiar a modo empleado';
+
   openModal('Tu perfil', `
     <div style="display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;">
       <div class="empty-icon" style="width:76px;height:76px;">
         <svg viewBox="0 0 24 24" fill="currentColor" style="width:40px;height:40px;"><circle cx="12" cy="8.2" r="4"/><path d="M4 20c0-4.4 4-6.6 8-6.6s8 2.2 8 6.6"/></svg>
       </div>
       <h2 style="margin:6px 0 0;font-size:19px;">${escapeHtml(nombreMostrado())}</h2>
-      <span class="chip">${rolTexto}</span>
+      <span class="chip">${modoTexto}</span>
     </div>
     <div class="detail-row"><span>ID</span><span>${escapeHtml(STATE.user.username)}</span></div>
     ${!STATE.user.nombreCompleto ? `<button class="btn-secondary" onclick="renderNombreFormulario('perfil')">Configurar nombre</button>` : ''}
+    <button class="btn-secondary" style="width:100%;margin-top:10px;" onclick="cambiarModoCuenta('${siguienteModo}')">${siguienteTexto}</button>
     <button class="btn-ghost-danger" style="width:100%;margin-top:10px;" onclick="pedirConfirmacionEliminarCuenta()">Eliminar cuenta</button>
   `);
+}
+
+async function cambiarModoCuenta(modo) {
+  try {
+    const user = await api.post('/api/auth/cambiar-modo', { userId: STATE.user.id, modo });
+    STATE.user = user;
+    closeModal();
+
+    // Cambiar de modo también cambia la sala Socket.IO. Reconectamos para no
+    // conservar la sala del modo anterior.
+    if (STATE.socket) {
+      STATE.socket.disconnect();
+      STATE.socket = null;
+    }
+    setupSocket();
+    enterApp();
+    toast(modo === 'jefe' ? 'Ahora estás en modo jefe' : 'Ahora estás en modo empleado');
+  } catch (ex) {
+    toast(ex.message || 'No se pudo cambiar el modo.');
+  }
 }
 
 function pedirConfirmacionEliminarCuenta() {
@@ -106,7 +128,6 @@ async function confirmarEliminarCuenta() {
   } catch (ex) { err.textContent = ex.message; }
 }
 
-/* ---------- INFORMACIÓN ---------- */
 function openInformacion() {
   openModal('Información', `
     <div style="text-align:center;display:flex;flex-direction:column;gap:6px;padding:8px 0;">
@@ -117,6 +138,8 @@ function openInformacion() {
   `);
 }
 
+// Se conserva para compatibilidad con el HTML de la versión anterior, pero ya
+// no se ejecuta durante el alta: las cuentas nuevas no eligen un rol.
 function setupRoleCards() {
   $all('.role-card').forEach(card => {
     card.addEventListener('click', async () => {
@@ -131,7 +154,6 @@ function setupRoleCards() {
   });
 }
 
-/* ---------- ¿ERES ESTUDIANTE? (solo EMPLEADO, antes de configurar nombre) ---------- */
 function mostrarEresEstudiante() {
   $('#nombre-content').innerHTML = `
     <h1>¿Eres estudiante?</h1>
@@ -154,7 +176,6 @@ async function guardarEsEstudiante(valor) {
   mostrarConfigurarNombre();
 }
 
-/* ---------- ¿RECIBIR NOTIFICACIONES? (último paso del asistente) ---------- */
 function mostrarRecibirNotificaciones() {
   $('#nombre-content').innerHTML = `
     <h1>¿Quieres recibir notificaciones?</h1>
@@ -176,4 +197,3 @@ async function guardarNotificaciones(valor) {
   } catch (ex) { /* si falla igual seguimos, no bloquea el alta */ }
   enterApp();
 }
-
