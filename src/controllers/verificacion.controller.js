@@ -8,25 +8,23 @@ const evento = require('../models/evento.model');
 const notificaciones = require('../models/notificaciones.model');
 const { newId } = require('../utils/utils');
 
+// Flujo antiguo de compartir mediante shareCode desactivado.
 async function obtenerCodigo(req, res) {
-  const user = usuarios.buscarPorId(req.params.empleadoId);
-  if (!user || user.role !== 'empleado') return res.status(404).json({ error: 'No disponible.' });
-  res.json({ code: user.shareCode });
+  return res.status(410).json({ error: 'El antiguo código de compartir fue desactivado. Usa Amistades.' });
 }
 
+// Flujo antiguo de verificación directa desactivado; la relación nueva se hace mediante Amistades + asignación BOSS.
 async function enviarSolicitud(req, res) {
-  const { jefeId, jefeUsername, code } = req.body || {};
-  const empleado = db.users.find(u => u.role === 'empleado' && u.shareCode === String(code || '').trim());
-  if (!empleado) return res.status(404).json({ error: 'Código no encontrado.' });
-  if (empleado.id === jefeId) return res.status(400).json({ error: 'No puedes verificarte a ti mismo.' });
-  const solicitud = { id: newId('req'), jefeId, jefeUsername, empleadoId: empleado.id, estado: 'pendiente', fecha: Date.now() };
-  verificacion.crearSolicitud(solicitud); await save();
-  getIO().to('emp-' + empleado.id).emit('join:request', solicitud);
-  res.json({ ok: true, solicitudId: solicitud.id });
+  return res.status(410).json({ error: 'La verificación antigua fue desactivada. Usa Amistades.' });
 }
 
 async function listarNotificaciones(req, res) { res.json(notificaciones.listaCompleta(req.params.empleadoId)); }
-async function marcarLeidas(req, res) { notificaciones.marcarLeidas(req.params.empleadoId); await save(); res.json({ ok: true }); }
+async function marcarLeidas(req, res) {
+  const modo = req.body && (req.body.modo === 'jefe' || req.body.modo === 'empleado') ? req.body.modo : null;
+  notificaciones.marcarLeidas(req.params.empleadoId, modo);
+  await save();
+  res.json({ ok: true });
+}
 async function solicitudesPendientes(req, res) { res.json(verificacion.solicitudesPendientes(req.params.empleadoId)); }
 
 async function responderSolicitud(req, res) {
@@ -56,16 +54,14 @@ async function datosEmpleado(req, res) {
   res.json({ empleadoUsername: empleado ? empleado.username : (link && link.empleadoUsername), esEstudiante: empleado ? (empleado.esEstudiante === undefined ? null : empleado.esEstudiante) : null, ...trabajo.snapshot(req.params.empleadoId) });
 }
 
+// Hasta que exista una opción explícita del empleado, Estudio y Evento no se exponen al BOSS.
+// Esto evita que el antiguo vínculo de verificación desbloquee acceso antes de que el empleado lo autorice.
 async function estudioEmpleado(req, res) {
-  const jefeId = req.query.jefeId;
-  if (!verificacion.tieneAcceso(jefeId, req.params.empleadoId)) return res.status(403).json({ error: 'No tienes acceso verificado a este empleado.' });
-  res.json({ materias: estudio.materiasDe(req.params.empleadoId), actividades: estudio.actividadesDe(req.params.empleadoId) });
+  return res.status(403).json({ error: 'El acceso BOSS a Estudio todavía no está habilitado por el empleado.' });
 }
 
 async function eventoEmpleado(req, res) {
-  const jefeId = req.query.jefeId;
-  if (!verificacion.tieneAcceso(jefeId, req.params.empleadoId)) return res.status(403).json({ error: 'No tienes acceso verificado a este empleado.' });
-  res.json(evento.eventosDe(req.params.empleadoId));
+  return res.status(403).json({ error: 'El acceso BOSS a Evento todavía no está habilitado por el empleado.' });
 }
 
 module.exports = { obtenerCodigo, enviarSolicitud, listarNotificaciones, marcarLeidas, solicitudesPendientes, responderSolicitud, historial, datosEmpleado, estudioEmpleado, eventoEmpleado };
