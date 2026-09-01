@@ -21,16 +21,17 @@ async function registrar(req, res) {
   const recoveryCode = newRecoveryCode();
   const user = {
     id: newId('u'), username: uname, password: hashPassword(password),
-    role: null, shareCode: null, nombreCompleto: null,
+    // `role` se conserva temporalmente solo por compatibilidad con datos y controladores existentes.
+    // La interfaz y la cuenta nueva usan `modoActual` como fuente de verdad del modo activo.
+    role: 'empleado', shareCode: newShareCode(db), modoActual: 'empleado',
+    nombreCompleto: null,
     recoveryCodeHash: hashRecoveryCode(recoveryCode)
   };
   usuarios.crear(user);
   await save();
-  // el código de recuperación en texto plano SOLO se devuelve esta vez; no se vuelve a guardar así
   res.json({ ...usuarios.publicUser(user), recoveryCode });
 }
 
-// recuperar contraseña con el código de recuperación (no hay email/SMS conectado todavía)
 async function recuperar(req, res) {
   const { username, recoveryCode, newPassword } = req.body || {};
   const user = usuarios.buscarPorUsername(username);
@@ -45,7 +46,6 @@ async function recuperar(req, res) {
   res.json({ ok: true });
 }
 
-// configurar "Nombre y Apellido" (opcional) — un único espacio entre las dos palabras
 async function configurarNombre(req, res) {
   const { userId, nombreCompleto } = req.body || {};
   const user = usuarios.buscarPorId(userId);
@@ -59,7 +59,6 @@ async function configurarNombre(req, res) {
   res.json(usuarios.publicUser(user));
 }
 
-// asistente de bienvenida: ¿eres estudiante? / ¿recibir notificaciones?
 async function preferencias(req, res) {
   const { userId, esEstudiante, recibirNotificaciones } = req.body || {};
   const user = usuarios.buscarPorId(userId);
@@ -70,7 +69,20 @@ async function preferencias(req, res) {
   res.json(usuarios.publicUser(user));
 }
 
-// eliminar cuenta (pide contraseña para confirmar) — borra en cascada todo lo que le pertenece
+// Cambia el modo visual/operativo de la misma cuenta. La ID nunca cambia.
+// El campo `role` antiguo NO se modifica en esta etapa: otros módulos todavía lo usan como compatibilidad.
+async function cambiarModo(req, res) {
+  const { userId, modo } = req.body || {};
+  if (!['empleado', 'jefe'].includes(modo)) {
+    return res.status(400).json({ error: 'Modo inválido.' });
+  }
+  const user = usuarios.buscarPorId(userId);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+  user.modoActual = modo;
+  await save();
+  res.json(usuarios.publicUser(user));
+}
+
 async function eliminarCuenta(req, res) {
   const { userId, password } = req.body || {};
   const user = usuarios.buscarPorId(userId);
@@ -78,21 +90,23 @@ async function eliminarCuenta(req, res) {
     return res.status(401).json({ error: 'Contraseña incorrecta.' });
   }
 
-  if (user.role === 'empleado') {
-    db.turnos = db.turnos.filter(t => t.empleadoId !== userId);
-    db.lugares = db.lugares.filter(l => l.empleadoId !== userId);
-    db.materias = db.materias.filter(m => m.empleadoId !== userId);
-    db.actividades = db.actividades.filter(a => a.empleadoId !== userId);
-    db.eventos = db.eventos.filter(e => e.empleadoId !== userId);
-    db.notificaciones = db.notificaciones.filter(n => n.empleadoId !== userId);
-    db.joinRequests = db.joinRequests.filter(r => r.empleadoId !== userId);
-    db.links = db.links.filter(l => l.empleadoId !== userId);
-  } else if (user.role === 'jefe') {
-    db.joinRequests = db.joinRequests.filter(r => r.jefeId !== userId);
-    db.links = db.links.filter(l => l.jefeId !== userId);
-    // los trabajos que este jefe tenía asignados quedan sin jefe, no se borran los datos del empleado
-    db.turnos.forEach(t => { if (t.jefeAsignadoId === userId) { t.jefeAsignadoId = null; t.eliminacionPendiente = false; } });
-  }
+  // La cuenta ahora puede usar ambos modos. Al eliminarla, limpiamos ambos lados
+  // de las relaciones antiguas para no dejar referencias huérfanas.
+  db.turnos = db.turnos.filter(t => t.empleadoId !== userId);
+  db.lugares = db.lugares.filter(l => l.empleadoId !== userId);
+  db.materias = db.materias.filter(m => m.empleadoId !== userId);
+  db.actividades = db.actividades.filter(a => a.empleadoId !== userId);
+  db.eventos = db.eventos.filter(e => e.empleadoId !== userId);
+  db.notificaciones = db.notificaciones.filter(n => n.empleadoId !== userId);
+  db.joinRequests = db.joinRequests.filter(r => r.empleadoId !== userId && r.jefeId !== userId);
+  db.links = db.links.filter(l => l.empleadoId !== userId && l.jefeId !== userId);
+  db.turnos.forEach(t => {
+    if (t.jefeAsignadoId === userId) {
+      t.jefeAsignadoId = null;
+      t.eliminacionPendiente = false;
+    }
+  });
+
   usuarios.eliminar(userId);
   await save();
   res.json({ ok: true });
@@ -107,6 +121,7 @@ async function login(req, res) {
   res.json(usuarios.publicUser(user));
 }
 
+// Endpoint legado: se conserva para no romper cuentas existentes durante la migración.
 async function elegirRol(req, res) {
   const { userId, role } = req.body || {};
   if (!['jefe', 'empleado'].includes(role)) return res.status(400).json({ error: 'Perfil inválido.' });
@@ -115,8 +130,9 @@ async function elegirRol(req, res) {
   if (user.role) return res.status(400).json({ error: 'Ya tienes un perfil configurado.' });
   user.role = role;
   if (role === 'empleado') user.shareCode = newShareCode(db);
+  user.modoActual = role;
   await save();
   res.json(usuarios.publicUser(user));
 }
 
-module.exports = { registrar, recuperar, configurarNombre, preferencias, eliminarCuenta, login, elegirRol };
+module.exports = { registrar, recuperar, configurarNombre, preferencias, cambiarModo, eliminarCuenta, login, elegirRol };
