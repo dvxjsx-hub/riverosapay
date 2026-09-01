@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 
 const sessions = new Map();
-const COOKIE_NAME = 'riverospay_session';
+const COOKIE_NAME = 'riverosapay_session';
 const MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 
 function createSession(data) {
@@ -49,6 +49,16 @@ function readSession(req) {
   return getSession(match ? decodeURIComponent(match[1]) : null);
 }
 
+function requireUser(req, res, next) {
+  const session = readSession(req);
+  if (!session || session.type !== 'user' || !session.userId) {
+    return res.status(401).json({ error: 'Sesión de usuario requerida.' });
+  }
+  req.session = session;
+  req.userId = session.userId;
+  next();
+}
+
 function requireAdmin(req, res, next) {
   const session = readSession(req);
   if (!session || session.type !== 'admin') {
@@ -58,4 +68,4 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { COOKIE_NAME, createSession, getSession, destroySession, setSessionCookie, clearSessionCookie, readSession, requireAdmin };
+module.exports = { COOKIE_NAME, createSession, getSession, destroySession, setSessionCookie, clearSessionCookie, readSession, requireUser, requireAdmin };
