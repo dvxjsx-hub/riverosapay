@@ -94,7 +94,8 @@ async function eliminarCuenta(req, res) {
   db.materias = db.materias.filter(m => m.empleadoId !== userId);
   db.actividades = db.actividades.filter(a => a.empleadoId !== userId);
   db.eventos = db.eventos.filter(e => e.empleadoId !== userId);
-  db.notificaciones = db.notificaciones.filter(n => n.empleadoId !== userId);
+  // Las notificaciones nuevas usan usuarioId; las antiguas pueden usar empleadoId.
+  db.notificaciones = db.notificaciones.filter(n => n.usuarioId !== userId && n.empleadoId !== userId);
   db.joinRequests = db.joinRequests.filter(r => r.empleadoId !== userId && r.jefeId !== userId);
   db.links = db.links.filter(l => l.empleadoId !== userId && l.jefeId !== userId);
   if (Array.isArray(db.amistades)) {
