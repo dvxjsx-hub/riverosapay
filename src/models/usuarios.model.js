@@ -21,8 +21,6 @@ function eliminar(id) {
   db.users = db.users.filter(u => u.id !== id);
 }
 
-// Compatibilidad: las cuentas antiguas no tienen modoActual, así que su rol
-// determina temporalmente el modo inicial. Las cuentas nuevas ya lo guardan.
 function modoActual(u) {
   return u.modoActual || u.role || 'empleado';
 }
@@ -32,13 +30,13 @@ function publicUser(u) {
   return {
     id: u.id,
     username: u.username,
-    // role se conserva temporalmente para módulos antiguos durante la migración.
+    // role/shareCode se conservan temporalmente para módulos antiguos durante la migración.
     role: u.role || null,
     modoActual: modoActual(u),
     nombreCompleto: u.nombreCompleto || null,
     esEstudiante: u.esEstudiante === undefined ? null : u.esEstudiante,
     recibirNotificaciones: u.recibirNotificaciones === undefined ? null : u.recibirNotificaciones,
-    // El shareCode antiguo se mantiene solo como compatibilidad de transición.
+    codigoAmistad: u.codigoAmistad || null,
     shareCode: u.role === 'empleado' ? u.shareCode : undefined
   };
 }
