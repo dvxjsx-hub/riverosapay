@@ -12,6 +12,12 @@ function openModal(title, bodyHtml) {
   $('#modal-body').innerHTML = bodyHtml;
   $('#modal-overlay').classList.add('open');
   $('#modal').classList.add('open');
+  // Los formularios se crean dinámicamente dentro del modal. Darles foco
+  // evita que, tras cerrar/abrir varias veces, el teclado quede sin objetivo.
+  setTimeout(() => {
+    const first = $('#modal-body').querySelector('input:not([disabled]), textarea:not([disabled]), select:not([disabled])');
+    if (first) first.focus({ preventScroll: true });
+  }, 50);
 }
 function closeModal() {
   $('#modal-overlay').classList.remove('open');
