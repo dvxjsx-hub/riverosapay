@@ -22,18 +22,11 @@ function openDrawer() { $('#drawer').classList.add('open'); $('#drawer-overlay')
 function closeDrawer() { $('#drawer').classList.remove('open'); $('#drawer-overlay').classList.remove('open'); }
 
 function configurarMenuPorRol() {
-  const modo = modoActualUsuario();
-
-  // El antiguo "Compartir" deja de formar parte del menú desde esta tanda.
+  // Desde la arquitectura de amistades, todas las cuentas tienen acceso a
+  // Amistades y Notificaciones. La antigua Verificación queda fuera del menú.
   $('#drawer-compartir').classList.add('hidden');
-
-  if (modo === 'empleado') {
-    $('#drawer-notificaciones').classList.remove('hidden');
-    $('#drawer-verificar').classList.add('hidden');
-    $('#tabbar').classList.remove('hidden');
-  } else {
-    $('#drawer-notificaciones').classList.add('hidden');
-    $('#drawer-verificar').classList.remove('hidden');
-    $('#tabbar').classList.add('hidden');
-  }
+  $('#drawer-verificar').classList.add('hidden');
+  $('#drawer-notificaciones').classList.remove('hidden');
+  $('#drawer-informacion').innerHTML = `${$('#drawer-informacion').querySelector('svg').outerHTML} Información app`;
+  $('#tabbar').classList.toggle('hidden', modoActualUsuario() === 'jefe');
 }
