@@ -99,7 +99,11 @@ function cambiarVistaTrabajo(vista) {
   trabajoFiltroJefe = null;
   trabajoFiltroPago = 'todos';
   closeModal();
-  renderTrabajo();
+  if (STATE.viewMode === 'jefe-ver' && typeof renderJefeView === 'function') {
+    renderJefeView();
+  } else {
+    renderTrabajo();
+  }
 }
 
 function abrirAccionesTrabajo() {
@@ -156,14 +160,14 @@ async function abrirFiltroJefe() {
   } catch (ex) { toast(ex.message); }
 }
 
-function aplicarFiltroJefe(id) { trabajoFiltroJefe = id || null; closeModal(); renderTrabajo(); }
+function aplicarFiltroJefe(id) { trabajoFiltroJefe = id || null; closeModal(); if (STATE.viewMode === 'jefe-ver' && typeof renderJefeView === 'function') renderJefeView(); else renderTrabajo(); }
 
 function abrirFiltroPago() {
   openModal('Filtrar finalizados', `<button class="btn-primary" type="button" onclick="aplicarFiltroPago('todos')">Todos</button><button class="btn-secondary" style="margin-top:8px;" type="button" onclick="aplicarFiltroPago('pagados')">Pagados</button><button class="btn-secondary" style="margin-top:8px;" type="button" onclick="aplicarFiltroPago('no-pagados')">No pagados</button>`);
 }
 
-function aplicarFiltroPago(valor) { trabajoFiltroPago = valor; closeModal(); renderTrabajo(); }
-function activarBorradoTrabajo() { closeModal(); trabajoModoBorrado = true; renderTrabajo(); toast('Selecciona el trabajo que quieres borrar.'); }
+function aplicarFiltroPago(valor) { trabajoFiltroPago = valor; closeModal(); if (STATE.viewMode === 'jefe-ver' && typeof renderJefeView === 'function') renderJefeView(); else renderTrabajo(); }
+function activarBorradoTrabajo() { closeModal(); trabajoModoBorrado = true; if (STATE.viewMode === 'jefe-ver' && typeof renderJefeView === 'function') renderJefeView(); else renderTrabajo(); toast('Selecciona el trabajo que quieres borrar.'); }
 
 function openTurnoDetail(turnoId) {
   const isJefe = STATE.viewMode === 'jefe-ver';
