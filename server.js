@@ -18,6 +18,7 @@ const trabajoRoutes = require('./src/routes/trabajo.routes');
 const estudioRoutes = require('./src/routes/estudio.routes');
 const eventoRoutes = require('./src/routes/evento.routes');
 const verificacionRoutes = require('./src/routes/verificacion.routes');
+const amistadesRoutes = require('./src/routes/amistades.routes');
 
 const app = express();
 app.use(express.json());
@@ -28,6 +29,7 @@ app.use('/api', trabajoRoutes);
 app.use('/api/estudio', estudioRoutes);
 app.use('/api/evento', eventoRoutes);
 app.use('/api', verificacionRoutes);
+app.use('/api/amistades', amistadesRoutes);
 
 app.use(errorHandler);
 
