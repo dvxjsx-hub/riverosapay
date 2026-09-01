@@ -93,6 +93,7 @@ function setupDrawer() {
     const lastUser = localStorage.getItem('riverospay_last_user');
     if (lastUser) $('#log-user').value = lastUser;
     $('#log-pass').value = '';
+    setTimeout(() => $('#log-user')?.focus({ preventScroll: true }), 80);
   });
 }
 
@@ -103,6 +104,18 @@ function setupPerfil() {
 function setupModal() {
   $('#modal-close').addEventListener('click', closeModal);
   $('#modal-overlay').addEventListener('click', closeModal);
+}
+
+// En la vista de un jefe, él mismo no necesita estar en su propia lista de
+// amistades para aparecer como el jefe asignado de un trabajo.
+function nombreJefePorId(id) {
+  if (!id) return null;
+  if (STATE.viewMode === 'jefe-ver' && STATE.user && id === STATE.user.id) {
+    return STATE.user.nombreCompleto || STATE.user.username;
+  }
+  const amigos = STATE.amistades || [];
+  const a = amigos.find(x => x.id === id);
+  return a ? (a.nombreCompleto || a.username) : null;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
