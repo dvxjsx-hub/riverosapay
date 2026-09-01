@@ -53,3 +53,12 @@ function setupTabs() {
     });
   });
 }
+
+// La clasificación Horarios/Finalizados depende de la fecha y hora reales.
+// Mientras la app está abierta, se revisa periódicamente para que un trabajo
+// pase de Horarios a Finalizados sin esperar a cerrar y volver a abrir la app.
+setInterval(() => {
+  if (typeof trabajoEstaFinalizado === 'function' && typeof renderTrabajo === 'function' && STATE.activeTab === 'trabajo' && STATE.viewMode !== 'jefe-ver' && STATE.trabajo) {
+    renderTrabajo();
+  }
+}, 30000);
