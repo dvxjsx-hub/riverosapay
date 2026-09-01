@@ -21,14 +21,14 @@ const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'riverospay';
 const EMPTY_DB = {
   users: [],         // { id, username, password(hash), role, shareCode, modoActual, codigoAmistad }
   amistades: [],     // { id, usuarioId, amistadId, amistadUsername, fecha }
-  turnos: [],        // { id, empleadoId, lugarId, dia, horaInicio, horaFin, descripcion, pagado, valor }
+  turnos: [],        // { id, empleadoId, lugarId, fecha, dia, horaInicio, horaFin, descripcion, pagado, valor, jefeAsignadoId }
   lugares: [],       // { id, empleadoId, nombre }
   materias: [],      // { id, empleadoId, dia, nombre, horaInicio, horaFin }
   actividades: [],   // { id, empleadoId, dia, nombre, nota, hecha }
   eventos: [],       // { id, empleadoId, lugar, dia, hora, gastoMonto, gastoDescripcion, descripcion }
   joinRequests: [],  // legado: solicitudes de verificación antiguas
   links: [],         // legado: vínculos jefe-empleado antiguos
-  notificaciones: [] // { id, empleadoId, tipo, jefeUsername, lugar, fecha, leida }
+  notificaciones: [] // { id, usuarioId, empleadoId?, tipo, modoDestino, fecha, leida, ...datos }
 };
 
 // objeto ESTABLE: nunca se reasigna, solo se muta por dentro,
