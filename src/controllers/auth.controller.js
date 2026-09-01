@@ -1,7 +1,7 @@
 const { db, save } = require('../config/db');
 const usuarios = require('../models/usuarios.model');
 const { hashPassword, newId, newShareCode, newFriendCode, USERNAME_REGEX, PASSWORD_REGEX, hashRecoveryCode, newRecoveryCode } = require('../utils/utils');
-const { COOKIE_NAME, createSession, setSessionCookie, clearSessionCookie, readSession, destroySession } = require('../middleware/session');
+const { COOKIE_NAME, createSession, setSessionCookie, clearSessionCookie, readSession, destroySession, destroyUserSessions } = require('../middleware/session');
 
 async function registrar(req, res) {
   const { username, password } = req.body || {};
@@ -14,11 +14,7 @@ async function registrar(req, res) {
 
   const recoveryCode = newRecoveryCode();
   const now = new Date().toISOString();
-  const user = {
-    id: newId('u'), username: uname, password: hashPassword(password),
-    role: 'empleado', shareCode: newShareCode(db), modoActual: 'empleado', codigoAmistad: newFriendCode(db),
-    nombreCompleto: null, recoveryCodeHash: hashRecoveryCode(recoveryCode), createdAt: now, lastLoginAt: now
-  };
+  const user = { id: newId('u'), username: uname, password: hashPassword(password), role: 'empleado', shareCode: newShareCode(db), modoActual: 'empleado', codigoAmistad: newFriendCode(db), nombreCompleto: null, recoveryCodeHash: hashRecoveryCode(recoveryCode), createdAt: now, lastLoginAt: now };
   usuarios.crear(user); await save();
   setSessionCookie(res, createSession({ type: 'user', userId: user.id }));
   res.json({ ...usuarios.publicUser(user), recoveryCode });
@@ -29,7 +25,9 @@ async function recuperar(req, res) {
   const user = usuarios.buscarPorUsername(username);
   if (!user || !user.recoveryCodeHash || hashRecoveryCode((recoveryCode || '').trim()) !== user.recoveryCodeHash) return res.status(401).json({ error: 'Usuario o código de recuperación incorrectos.' });
   if (!PASSWORD_REGEX.test(newPassword || '')) return res.status(400).json({ error: 'La nueva contraseña debe tener entre 6 y 12 caracteres (letras y números).' });
-  user.password = hashPassword(newPassword); await save(); res.json({ ok: true });
+  user.password = hashPassword(newPassword);
+  destroyUserSessions(user.id);
+  await save(); res.json({ ok: true });
 }
 
 async function configurarNombre(req, res) {
@@ -66,31 +64,23 @@ async function eliminarDatosCuenta(userId) {
   db.links = db.links.filter(l => l.empleadoId !== userId && l.jefeId !== userId);
   if (Array.isArray(db.amistades)) db.amistades = db.amistades.filter(a => a.usuarioId !== userId && a.amistadId !== userId);
   db.turnos.forEach(t => { if (t.jefeAsignadoId === userId) { t.jefeAsignadoId = null; t.eliminacionPendiente = false; } });
-  usuarios.eliminar(userId); await save();
+  usuarios.eliminar(userId); destroyUserSessions(userId); await save();
 }
 
 async function eliminarCuenta(req, res) {
   const { password } = req.body || {}; const user = usuarios.buscarPorId(req.userId);
   if (!user || user.password !== hashPassword(password || '')) return res.status(401).json({ error: 'Contraseña incorrecta.' });
   await eliminarDatosCuenta(req.userId);
-  const session = readSession(req);
-  if (session && session.type === 'user' && session.userId === req.userId) {
-    const match = (req.headers.cookie || '').match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]+)`));
-    if (match) destroySession(decodeURIComponent(match[1]));
-  }
   clearSessionCookie(res); res.json({ ok: true });
 }
 
 async function login(req, res) {
   const { username, password } = req.body || {}; const uname = (username || '').trim().toLowerCase();
   const adminId = (process.env.ADMIN_ID || '').trim().toLowerCase(); const adminPassword = process.env.ADMIN_PASSWORD || '';
-  if (adminId && adminPassword && uname === adminId && password === adminPassword) {
-    setSessionCookie(res, createSession({ type: 'admin' })); return res.json({ tipo: 'admin' });
-  }
+  if (adminId && adminPassword && uname === adminId && password === adminPassword) { setSessionCookie(res, createSession({ type: 'admin' })); return res.json({ tipo: 'admin' }); }
   const user = usuarios.buscarPorUsername(uname);
   if (!user || user.password !== hashPassword(password || '')) return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
-  user.lastLoginAt = new Date().toISOString();
-  await save();
+  user.lastLoginAt = new Date().toISOString(); await save();
   setSessionCookie(res, createSession({ type: 'user', userId: user.id })); res.json(usuarios.publicUser(user));
 }
 
