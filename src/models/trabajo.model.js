@@ -33,7 +33,13 @@ function crearTurno(turno) {
 }
 
 function eliminarTurno(id) {
+  const turno = db.turnos.find(t => t.id === id);
   db.turnos = db.turnos.filter(t => t.id !== id);
+  // El nombre del lugar no debe quedar flotando cuando ya no existe ningún turno allí.
+  if (turno) {
+    const quedanTurnos = db.turnos.some(t => t.lugarId === turno.lugarId);
+    if (!quedanTurnos) db.lugares = db.lugares.filter(l => l.id !== turno.lugarId);
+  }
 }
 
 function misJefes(empleadoId) {
