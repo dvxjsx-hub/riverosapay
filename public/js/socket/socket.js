@@ -1,16 +1,14 @@
 /* ============================================================
    Riverospay · SOCKET.IO: conexion en tiempo real
-   Extraído de app.js (refactor de estructura, sin cambios de lógica)
    ============================================================ */
 
-/* ---------- SOCKET.IO ---------- */
 function setupSocket() {
   if (STATE.socket) return;
   STATE.socket = io();
   STATE.socket.on('connect', registerSocketRoom);
 
   STATE.socket.on('trabajo:update', (data) => {
-    if (STATE.user.role === 'empleado') {
+    if (modoActualUsuario() === 'empleado') {
       STATE.trabajo = data;
       if (STATE.activeTab === 'trabajo') renderTrabajo();
     } else if (STATE.viewMode === 'jefe-ver' && STATE.jefeView) {
@@ -21,7 +19,7 @@ function setupSocket() {
   });
 
   STATE.socket.on('estudio:update', (data) => {
-    if (STATE.user.role === 'empleado') {
+    if (modoActualUsuario() === 'empleado') {
       STATE.estudio = data.materias;
       STATE.actividades = data.actividades;
       if (STATE.activeTab === 'estudio') renderEstudio();
@@ -33,7 +31,7 @@ function setupSocket() {
   });
 
   STATE.socket.on('evento:update', (data) => {
-    if (STATE.user.role === 'empleado') {
+    if (modoActualUsuario() === 'empleado') {
       STATE.eventos = data;
       if (STATE.activeTab === 'evento') renderEventos();
     } else if (STATE.viewMode === 'jefe-ver' && STATE.jefeView) {
@@ -43,23 +41,26 @@ function setupSocket() {
   });
 
   STATE.socket.on('join:request', (solicitud) => {
-    if (STATE.user.role !== 'empleado') return;
+    if (modoActualUsuario() !== 'empleado') return;
     STATE.notificaciones = [solicitud, ...(STATE.notificaciones || [])];
     updateNotifBadge();
     if (STATE.user.recibirNotificaciones !== false) showRequestCard(solicitud);
   });
 
   STATE.socket.on('notificaciones:update', () => {
-    if (STATE.user.role === 'empleado') loadNotificaciones();
+    if (modoActualUsuario() === 'empleado') loadNotificaciones();
   });
 
   STATE.socket.on('join:result', (payload) => {
-    if (STATE.user.role === 'jefe') handleJoinResult(payload);
+    if (modoActualUsuario() === 'jefe') handleJoinResult(payload);
   });
 }
 
 function registerSocketRoom() {
   if (!STATE.user || !STATE.socket) return;
-  if (STATE.user.role === 'empleado') STATE.socket.emit('register-empleado', { empleadoId: STATE.user.id });
-  else if (STATE.user.role === 'jefe') STATE.socket.emit('register-jefe', { jefeId: STATE.user.id });
+  if (modoActualUsuario() === 'empleado') {
+    STATE.socket.emit('register-empleado', { empleadoId: STATE.user.id });
+  } else {
+    STATE.socket.emit('register-jefe', { jefeId: STATE.user.id });
+  }
 }
