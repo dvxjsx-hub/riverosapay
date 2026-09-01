@@ -1,11 +1,5 @@
 /* ============================================================
    Riverospay · ESTADO GLOBAL Y CONSTANTES
-   Extraído de app.js (refactor de estructura, sin cambios de lógica)
-   ============================================================ */
-
-/* ============================================================
-   Riverospay · Organizador (actualización — NO es versión final)
-   Frontend vanilla JS. Toda la info vive en el servidor.
    ============================================================ */
 
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
@@ -26,7 +20,7 @@ const ICONS = {
 const STATE = {
   user: null,
   socket: null,
-  viewMode: 'empleado',   // 'empleado' | 'jefe-historial' | 'jefe-ver'
+  viewMode: 'empleado',
   activeTab: null,
   trabajo: { lugares: [], turnos: [] },
   estudio: [],
@@ -34,6 +28,11 @@ const STATE = {
   eventos: [],
   historial: [],
   notificaciones: [],
-  jefeView: null,          // { empleadoId, empleadoUsername, activeSubTab, lugares, turnos, materias, actividades, eventos }
-  pendingRequest: null
+  jefeView: null,
+  pendingRequest: null,
+  onboardingPending: false
 };
+
+function modoActualUsuario() {
+  return (STATE.user && (STATE.user.modoActual || STATE.user.role)) || 'empleado';
+}
