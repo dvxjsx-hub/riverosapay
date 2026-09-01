@@ -21,36 +21,40 @@ function buscarOCrearLugar(empleadoId, nombreLugar) {
   return lug;
 }
 
-function buscarLugarPorId(id) {
-  return db.lugares.find(l => l.id === id);
-}
-
-function buscarTurnoPorId(id) {
-  return db.turnos.find(t => t.id === id);
-}
-
-function crearTurno(turno) {
-  db.turnos.push(turno);
-}
+function buscarLugarPorId(id) { return db.lugares.find(l => l.id === id); }
+function buscarTurnoPorId(id) { return db.turnos.find(t => t.id === id); }
+function crearTurno(turno) { db.turnos.push(turno); }
 
 function eliminarTurno(id) {
   const turno = db.turnos.find(t => t.id === id);
   db.turnos = db.turnos.filter(t => t.id !== id);
-  if (turno) {
-    const quedanTurnos = db.turnos.some(t => t.lugarId === turno.lugarId);
-    if (!quedanTurnos) db.lugares = db.lugares.filter(l => l.id !== turno.lugarId);
+  if (turno && !db.turnos.some(t => t.lugarId === turno.lugarId)) {
+    db.lugares = db.lugares.filter(l => l.id !== turno.lugarId);
   }
 }
 
 function misJefes(empleadoId) {
-  return db.links
-    .filter(l => l.empleadoId === empleadoId)
-    .map(l => ({ jefeId: l.jefeId, jefeUsername: l.jefeUsername }));
+  return db.links.filter(l => l.empleadoId === empleadoId).map(l => ({ jefeId: l.jefeId, jefeUsername: l.jefeUsername }));
+}
+
+function tieneTrabajoAsignado(jefeId, empleadoId) {
+  return db.turnos.some(t => t.empleadoId === empleadoId && t.jefeAsignadoId === jefeId);
+}
+
+function empleadosConTrabajosAsignados(jefeId) {
+  const ids = [...new Set(db.turnos.filter(t => t.jefeAsignadoId === jefeId).map(t => t.empleadoId))];
+  return ids.map(empleadoId => {
+    const user = db.users.find(u => u.id === empleadoId);
+    const turnos = db.turnos.filter(t => t.empleadoId === empleadoId && t.jefeAsignadoId === jefeId);
+    const idsLugares = new Set(turnos.map(t => t.lugarId));
+    const lugares = db.lugares.filter(l => idsLugares.has(l.id));
+    return { empleadoId, empleadoUsername: user ? user.username : 'Empleado', empleadoNombre: user ? (user.nombreCompleto || user.username) : 'Empleado', lugares, turnos };
+  });
 }
 
 module.exports = {
   snapshot, broadcast,
   buscarOCrearLugar, buscarLugarPorId,
   buscarTurnoPorId, crearTurno, eliminarTurno,
-  misJefes
+  misJefes, tieneTrabajoAsignado, empleadosConTrabajosAsignados
 };
