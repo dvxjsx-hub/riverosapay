@@ -79,9 +79,15 @@ function setupAuth() {
     const pass = $('#log-pass').value;
     const err = $('#log-error');
     try {
-      const user = await api.post('/api/auth/login', { username, password: pass });
-      localStorage.setItem('riverospay_last_user', user.username);
-      afterAuth(user);
+      const auth = await api.post('/api/auth/login', { username, password: pass });
+      if (auth?.tipo === 'admin') {
+        localStorage.removeItem('riverospay_last_user');
+        if (typeof enterAdmin === 'function') enterAdmin();
+        else err.textContent = 'No se pudo cargar el panel de administración.';
+        return;
+      }
+      localStorage.setItem('riverospay_last_user', auth.username);
+      afterAuth(auth);
     } catch (ex) { err.textContent = ex.message; }
   });
 }
