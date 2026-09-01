@@ -1,9 +1,7 @@
 /* ============================================================
    Riverospay · AUTENTICACION: splash, login/registro, recuperar contraseña
-   Extraído de app.js (refactor de estructura, sin cambios de lógica)
    ============================================================ */
 
-/* ---------- SPLASH ---------- */
 function initSplash() { setTimeout(goToAuth, 2200); }
 
 function goToAuth() {
@@ -17,7 +15,6 @@ function goToAuth() {
   }
 }
 
-/* ---------- AUTH ---------- */
 function setAuthMode(mode) {
   const isLogin = mode === 'login';
   $('#form-register').classList.toggle('hidden', isLogin);
@@ -65,6 +62,7 @@ function setupAuth() {
       const user = await api.post('/api/auth/register', { username, password: pass });
       localStorage.setItem('riverospay_last_user', user.username);
       STATE.user = user;
+      STATE.onboardingPending = true;
       setupSocket();
       mostrarCodigoRecuperacion(user.recoveryCode);
     } catch (ex) { err.textContent = ex.message; }
@@ -85,20 +83,20 @@ function setupAuth() {
 
 function afterAuth(user) {
   STATE.user = user;
+  STATE.onboardingPending = false;
   setupSocket();
   proceedAfterLogin();
 }
 
 function proceedAfterLogin() {
-  if (!STATE.user.role) {
-    $('#role-error').textContent = '';
-    showScreen('screen-role');
-  } else {
-    enterApp();
+  if (STATE.onboardingPending) {
+    STATE.onboardingPending = false;
+    mostrarEresEstudiante();
+    return;
   }
+  enterApp();
 }
 
-/* ---------- CÓDIGO DE RECUPERACIÓN (una sola vez, tras crear la cuenta) ---------- */
 function mostrarCodigoRecuperacion(code) {
   $('#recovery-content').innerHTML = `
     <h1>Guarda tu código de recuperación</h1>
@@ -126,7 +124,6 @@ function copiarTexto(texto) {
   }
 }
 
-/* ---------- RECUPERAR CONTRASEÑA ---------- */
 function abrirRecuperarContrasena() {
   openModal('Recuperar contraseña', `
     <label>Usuario<input id="f-rec-user" type="text" autocomplete="username"></label>
