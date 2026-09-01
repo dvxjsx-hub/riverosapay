@@ -14,6 +14,7 @@ const { initSockets } = require('./src/sockets');
 const errorHandler = require('./src/middleware/errorHandler');
 
 const authRoutes = require('./src/routes/auth.routes');
+const adminRoutes = require('./src/routes/admin.routes');
 const trabajoRoutes = require('./src/routes/trabajo.routes');
 const estudioRoutes = require('./src/routes/estudio.routes');
 const eventoRoutes = require('./src/routes/evento.routes');
@@ -25,6 +26,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api', trabajoRoutes);
 app.use('/api/estudio', estudioRoutes);
 app.use('/api/evento', eventoRoutes);
@@ -37,8 +39,6 @@ const server = http.createServer(app);
 const io = new Server(server);
 setIO(io);
 initSockets(io);
-
-/* ================= START ================= */
 
 (async () => {
   await init();
