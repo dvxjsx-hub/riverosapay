@@ -21,17 +21,26 @@ function eliminar(id) {
   db.users = db.users.filter(u => u.id !== id);
 }
 
-// forma "pública" del usuario: lo que se le puede devolver al cliente sin exponer password/hashes
+// Compatibilidad: las cuentas antiguas no tienen modoActual, así que su rol
+// determina temporalmente el modo inicial. Las cuentas nuevas ya lo guardan.
+function modoActual(u) {
+  return u.modoActual || u.role || 'empleado';
+}
+
+// forma pública: nunca expone password ni hashes.
 function publicUser(u) {
   return {
     id: u.id,
     username: u.username,
-    role: u.role,
+    // role se conserva temporalmente para módulos antiguos durante la migración.
+    role: u.role || null,
+    modoActual: modoActual(u),
     nombreCompleto: u.nombreCompleto || null,
     esEstudiante: u.esEstudiante === undefined ? null : u.esEstudiante,
     recibirNotificaciones: u.recibirNotificaciones === undefined ? null : u.recibirNotificaciones,
+    // El shareCode antiguo se mantiene solo como compatibilidad de transición.
     shareCode: u.role === 'empleado' ? u.shareCode : undefined
   };
 }
 
-module.exports = { buscarPorUsername, buscarPorId, existeUsername, crear, eliminar, publicUser };
+module.exports = { buscarPorUsername, buscarPorId, existeUsername, crear, eliminar, publicUser, modoActual };
