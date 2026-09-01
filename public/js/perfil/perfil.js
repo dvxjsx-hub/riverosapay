@@ -82,10 +82,10 @@ function openPerfil() {
 function abrirSelectorModo() {
   const modoActual = modoActualUsuario();
   const siguienteModo = modoActual === 'jefe' ? 'empleado' : 'jefe';
-  const siguienteTexto = siguienteModo === 'jefe' ? 'Modo jefe' : 'Modo empleado';
+  const siguienteTexto = siguienteModo === 'jefe' ? 'Modo BOSS' : 'Modo empleado';
 
   openModal('¿Quieres cambiar modo?', `
-    <p class="muted" style="text-align:center;margin:0 0 18px;">Modo actual: <b>${modoActual === 'jefe' ? 'Modo jefe' : 'Modo empleado'}</b></p>
+    <p class="muted" style="text-align:center;margin:0 0 18px;">Modo actual: <b>${modoActual === 'jefe' ? 'MODO BOSS' : 'MODO EMPLEADO'}</b></p>
     <button class="btn-primary" style="width:100%;" onclick="cambiarModoCuenta('${siguienteModo}')">${siguienteTexto}</button>
     <button class="link-btn" style="width:100%;margin-top:8px;" onclick="openPerfil()">Cancelar</button>
   `);
@@ -102,7 +102,7 @@ async function cambiarModoCuenta(modo) {
     }
     setupSocket();
     enterApp();
-    toast(modo === 'jefe' ? 'Ahora estás en modo jefe' : 'Ahora estás en modo empleado');
+    toast(modo === 'jefe' ? 'Ahora estás en MODO BOSS' : 'Ahora estás en MODO EMPLEADO');
   } catch (ex) {
     toast(ex.message || 'No se pudo cambiar el modo.');
   }
