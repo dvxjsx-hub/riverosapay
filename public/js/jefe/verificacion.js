@@ -1,6 +1,6 @@
 /* ============================================================
    Riverospay · MODO BOSS
-   Los trabajos llegan por amistad + asignación de jefe.
+   Los trabajos llegan por amistad + asignación de BOSS.
    ============================================================ */
 
 async function loadHistorial() {
@@ -32,7 +32,9 @@ async function abrirDesdeHistorial(empleadoId) {
     lugares: found ? (found.lugares || []) : [],
     turnos: found ? (found.turnos || []) : [],
     materias: [], actividades: [], eventos: [],
-    activeSubTab: 'trabajo'
+    activeSubTab: 'trabajo',
+    // Un BOSS que está consultando a un empleado queda restringido a Trabajo.
+    contextoRestringido: true
   };
   STATE.viewMode = 'jefe-ver';
   trabajoVistaActual = TRABAJO_VISTAS.HORARIOS;
@@ -51,6 +53,18 @@ async function refrescarJefeTrabajo() {
 }
 
 async function cambiarSubTabJefe(tab) {
+  if (!STATE.jefeView) return;
+
+  // Tanda 6: al consultar el perfil de un empleado, el BOSS solo puede
+  // consultar Trabajo. Horarios/Finalizados no deben desbloquear Estudio ni Evento.
+  if (STATE.jefeView.contextoRestringido && tab !== 'trabajo') {
+    STATE.jefeView.activeSubTab = 'trabajo';
+    await refrescarJefeTrabajo();
+    renderJefeView();
+    toast('En el perfil de un empleado solo puedes consultar Trabajo por ahora.');
+    return;
+  }
+
   STATE.jefeView.activeSubTab = tab;
   try {
     if (tab === 'trabajo') await refrescarJefeTrabajo();
@@ -65,8 +79,9 @@ async function cambiarSubTabJefe(tab) {
 function renderJefeView() {
   const d = STATE.jefeView;
   const sub = d.activeSubTab;
-  const mostrarEstudio = d.esEstudiante !== false;
-  const subtabsHtml = `<div class="subtabs"><button class="subtab ${sub === 'trabajo' ? 'active' : ''}" onclick="cambiarSubTabJefe('trabajo')">Trabajo</button>${mostrarEstudio ? `<button class="subtab ${sub === 'estudio' ? 'active' : ''}" onclick="cambiarSubTabJefe('estudio')">Estudio</button>` : ''}<button class="subtab ${sub === 'evento' ? 'active' : ''}" onclick="cambiarSubTabJefe('evento')">Evento</button></div>`;
+  const mostrarEstudio = d.contextoRestringido ? false : d.esEstudiante !== false;
+  const mostrarEvento = d.contextoRestringido ? false : true;
+  const subtabsHtml = `<div class="subtabs"><button class="subtab ${sub === 'trabajo' ? 'active' : ''}" onclick="cambiarSubTabJefe('trabajo')">Trabajo</button>${mostrarEstudio ? `<button class="subtab ${sub === 'estudio' ? 'active' : ''}" onclick="cambiarSubTabJefe('estudio')">Estudio</button>` : ''}${mostrarEvento ? `<button class="subtab ${sub === 'evento' ? 'active' : ''}" onclick="cambiarSubTabJefe('evento')">Evento</button>` : ''}</div>`;
   let body = '';
   if (sub === 'trabajo') {
     const selector = `<div style="margin-bottom:10px;"><button class="trabajo-vista-selector" style="width:100%;display:flex;justify-content:space-between;align-items:center;background:rgba(21,92,49,.08);border:1.5px solid var(--line);border-radius:var(--radius-md);padding:14px 16px;color:var(--green-900);font-family:var(--font-display);font-weight:700;font-size:15px;cursor:pointer;" type="button" onclick="abrirSelectorTrabajo()"><span>${trabajoVistaActual === TRABAJO_VISTAS.HORARIOS ? 'Horarios' : 'Finalizados'}</span><span>⌄</span></button></div>`;
@@ -84,5 +99,9 @@ function renderJefeView() {
 function volverAHistorial() {
   STATE.viewMode = 'jefe-historial';
   STATE.jefeView = null;
+  trabajoVistaActual = TRABAJO_VISTAS.HORARIOS;
+  trabajoFiltroJefe = null;
+  trabajoFiltroPago = 'todos';
+  trabajoModoBorrado = false;
   loadHistorial();
 }
