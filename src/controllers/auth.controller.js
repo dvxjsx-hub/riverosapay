@@ -1,7 +1,7 @@
 const { db, save } = require('../config/db');
 const usuarios = require('../models/usuarios.model');
 const { hashPassword, newId, newShareCode, newFriendCode, USERNAME_REGEX, PASSWORD_REGEX, hashRecoveryCode, newRecoveryCode } = require('../utils/utils');
-const { createSession, setSessionCookie, clearSessionCookie, readSession, destroySession } = require('../middleware/session');
+const { COOKIE_NAME, createSession, setSessionCookie, clearSessionCookie, readSession, destroySession } = require('../middleware/session');
 
 async function registrar(req, res) {
   const { username, password } = req.body || {};
@@ -13,10 +13,11 @@ async function registrar(req, res) {
   if (usuarios.existeUsername(uname)) return res.status(409).json({ error: 'Ese usuario ya existe.' });
 
   const recoveryCode = newRecoveryCode();
+  const now = new Date().toISOString();
   const user = {
     id: newId('u'), username: uname, password: hashPassword(password),
     role: 'empleado', shareCode: newShareCode(db), modoActual: 'empleado', codigoAmistad: newFriendCode(db),
-    nombreCompleto: null, recoveryCodeHash: hashRecoveryCode(recoveryCode), createdAt: new Date().toISOString(), lastLoginAt: new Date().toISOString()
+    nombreCompleto: null, recoveryCodeHash: hashRecoveryCode(recoveryCode), createdAt: now, lastLoginAt: now
   };
   usuarios.crear(user); await save();
   setSessionCookie(res, createSession({ type: 'user', userId: user.id }));
@@ -32,7 +33,7 @@ async function recuperar(req, res) {
 }
 
 async function configurarNombre(req, res) {
-  const { userId, nombreCompleto } = req.body || {}; const user = usuarios.buscarPorId(userId);
+  const { nombreCompleto } = req.body || {}; const user = usuarios.buscarPorId(req.userId);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
   const limpio = (nombreCompleto || '').trim().replace(/\s+/g, ' ');
   if (!/^[A-Za-zÀ-ÿÑñ]+ [A-Za-zÀ-ÿÑñ]+$/.test(limpio)) return res.status(400).json({ error: 'Ingresa un nombre y un apellido separados por un solo espacio.' });
@@ -40,7 +41,7 @@ async function configurarNombre(req, res) {
 }
 
 async function preferencias(req, res) {
-  const { userId, esEstudiante, recibirNotificaciones } = req.body || {}; const user = usuarios.buscarPorId(userId);
+  const { esEstudiante, recibirNotificaciones } = req.body || {}; const user = usuarios.buscarPorId(req.userId);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
   if (typeof esEstudiante === 'boolean') user.esEstudiante = esEstudiante;
   if (typeof recibirNotificaciones === 'boolean') user.recibirNotificaciones = recibirNotificaciones;
@@ -48,9 +49,9 @@ async function preferencias(req, res) {
 }
 
 async function cambiarModo(req, res) {
-  const { userId, modo } = req.body || {};
+  const { modo } = req.body || {};
   if (!['empleado', 'jefe'].includes(modo)) return res.status(400).json({ error: 'Modo inválido.' });
-  const user = usuarios.buscarPorId(userId); if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+  const user = usuarios.buscarPorId(req.userId); if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
   user.modoActual = modo; await save(); res.json(usuarios.publicUser(user));
 }
 
@@ -69,12 +70,12 @@ async function eliminarDatosCuenta(userId) {
 }
 
 async function eliminarCuenta(req, res) {
-  const { userId, password } = req.body || {}; const user = usuarios.buscarPorId(userId);
+  const { password } = req.body || {}; const user = usuarios.buscarPorId(req.userId);
   if (!user || user.password !== hashPassword(password || '')) return res.status(401).json({ error: 'Contraseña incorrecta.' });
-  await eliminarDatosCuenta(userId);
+  await eliminarDatosCuenta(req.userId);
   const session = readSession(req);
-  if (session && session.type === 'user' && session.userId === userId) {
-    const match = (req.headers.cookie || '').match(/(?:^|;\s*)riverospay_session=([^;]+)/);
+  if (session && session.type === 'user' && session.userId === req.userId) {
+    const match = (req.headers.cookie || '').match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]+)`));
     if (match) destroySession(decodeURIComponent(match[1]));
   }
   clearSessionCookie(res); res.json({ ok: true });
@@ -94,15 +95,15 @@ async function login(req, res) {
 }
 
 async function logout(req, res) {
-  const match = (req.headers.cookie || '').match(/(?:^|;\s*)riverospay_session=([^;]+)/);
+  const match = (req.headers.cookie || '').match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]+)`));
   if (match) destroySession(decodeURIComponent(match[1]));
   clearSessionCookie(res); res.json({ ok: true });
 }
 
 async function elegirRol(req, res) {
-  const { userId, role } = req.body || {};
+  const { role } = req.body || {};
   if (!['jefe', 'empleado'].includes(role)) return res.status(400).json({ error: 'Perfil inválido.' });
-  const user = usuarios.buscarPorId(userId); if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+  const user = usuarios.buscarPorId(req.userId); if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
   if (user.role) return res.status(400).json({ error: 'Ya tienes un perfil configurado.' });
   user.role = role; if (role === 'empleado') user.shareCode = newShareCode(db); user.modoActual = role;
   if (!user.codigoAmistad) user.codigoAmistad = newFriendCode(db); await save(); res.json(usuarios.publicUser(user));
