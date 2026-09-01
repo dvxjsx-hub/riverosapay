@@ -1,8 +1,10 @@
 const express = require('express');
 const estudio = require('../controllers/estudio.controller');
 const ah = require('../middleware/asyncHandler');
+const { requireUser } = require('../middleware/session');
 
 const router = express.Router();
+router.use(requireUser);
 
 router.get('/:empleadoId', ah(estudio.obtenerMaterias));
 router.post('/:empleadoId', ah(estudio.crearMateria));
