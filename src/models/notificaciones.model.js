@@ -2,12 +2,17 @@ const { db, save } = require('../config/db');
 const { getIO } = require('../realtime/io');
 const { newId } = require('../utils/utils');
 
-// Las notificaciones nuevas pertenecen a un usuario, sin depender de su modo.
-// modoDestino permite separar visualmente las notificaciones de EMPLEADO y BOSS.
-// empleadoId se conserva en notificaciones antiguas por compatibilidad.
+// Las notificaciones pertenecen a una cuenta, pero pueden estar destinadas
+// específicamente al modo EMPLEADO o al modo BOSS.
 function modoDestinoPorTipo(tipo) {
   if (tipo === 'jefe_asignado_trabajo' || tipo === 'trabajo_eliminacion_solicitada') return 'jefe';
   return 'empleado';
+}
+
+function modoDestino(n) {
+  return n && (n.modoDestino === 'jefe' || n.modoDestino === 'empleado')
+    ? n.modoDestino
+    : modoDestinoPorTipo(n && n.tipo);
 }
 
 async function crearParaUsuario(usuarioId, tipo, extra = {}) {
@@ -47,8 +52,10 @@ function listaCompleta(usuarioId) {
   return [...solicitudes, ...infos].sort((a, b) => b.fecha - a.fecha);
 }
 
-function marcarLeidas(usuarioId) {
-  db.notificaciones.filter(n => n.usuarioId === usuarioId || n.empleadoId === usuarioId).forEach(n => { n.leida = true; });
+function marcarLeidas(usuarioId, modo = null) {
+  db.notificaciones
+    .filter(n => (n.usuarioId === usuarioId || n.empleadoId === usuarioId) && (!modo || modoDestino(n) === modo))
+    .forEach(n => { n.leida = true; });
 }
 
-module.exports = { crear, crearParaUsuario, listaCompleta, marcarLeidas };
+module.exports = { crear, crearParaUsuario, listaCompleta, marcarLeidas, modoDestino };
