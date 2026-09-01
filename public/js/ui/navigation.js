@@ -35,12 +35,12 @@ function prepararDrawerOrganizador() {
   item.innerHTML = `${ICONS.home} Organizador`;
   const referencia = $('#drawer-amistades') || $('#drawer-notificaciones') || $('#drawer-informacion');
   drawer.insertBefore(item, referencia);
+  item.addEventListener('click', abrirOrganizador);
 }
 
 function abrirOrganizador() {
   closeDrawer();
 
-  // En MODO BOSS, el organizador propio se centra en los trabajos asignados.
   if (modoActualUsuario() === 'jefe') {
     STATE.viewMode = 'jefe-historial';
     STATE.jefeView = null;
