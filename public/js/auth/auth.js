@@ -13,6 +13,10 @@ function goToAuth() {
   } else {
     setAuthMode('register');
   }
+  setTimeout(() => {
+    const campo = lastUser ? $('#log-user') : $('#reg-user');
+    campo?.focus({ preventScroll: true });
+  }, 80);
 }
 
 function setAuthMode(mode) {
@@ -35,6 +39,7 @@ function setupAuth() {
     $('#form-register').reset();
     $('#form-login').reset();
     setAuthMode('register');
+    setTimeout(() => $('#reg-user')?.focus({ preventScroll: true }), 50);
   });
 
   $('#auth-olvide').addEventListener('click', (e) => {
