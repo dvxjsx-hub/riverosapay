@@ -16,7 +16,7 @@ async function registrar(req, res) {
   const user = {
     id: newId('u'), username: uname, password: hashPassword(password),
     role: 'empleado', shareCode: newShareCode(db), modoActual: 'empleado', codigoAmistad: newFriendCode(db),
-    nombreCompleto: null, recoveryCodeHash: hashRecoveryCode(recoveryCode), createdAt: new Date().toISOString()
+    nombreCompleto: null, recoveryCodeHash: hashRecoveryCode(recoveryCode), createdAt: new Date().toISOString(), lastLoginAt: new Date().toISOString()
   };
   usuarios.crear(user); await save();
   setSessionCookie(res, createSession({ type: 'user', userId: user.id }));
@@ -88,6 +88,8 @@ async function login(req, res) {
   }
   const user = usuarios.buscarPorUsername(uname);
   if (!user || user.password !== hashPassword(password || '')) return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
+  user.lastLoginAt = new Date().toISOString();
+  await save();
   setSessionCookie(res, createSession({ type: 'user', userId: user.id })); res.json(usuarios.publicUser(user));
 }
 
