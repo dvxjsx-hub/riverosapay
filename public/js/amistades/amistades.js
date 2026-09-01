@@ -6,7 +6,7 @@
 
 async function openAmistades() {
   openModal('Amistades', `
-    <div id="amistades-content" class="amistades-wrap">
+    <div id="amistades-content" style="display:flex;flex-direction:column;gap:14px;">
       <p class="muted" style="text-align:center;margin:0;">Cargando tus amistades…</p>
     </div>
   `);
@@ -30,29 +30,29 @@ async function cargarAmistades() {
   const codigo = STATE.user.codigoAmistad || '--------';
   const lista = STATE.amistades.length
     ? STATE.amistades.map(a => `
-        <div class="amistad-card">
-          <span class="amistad-avatar">${escapeHtml((a.nombreCompleto || a.username || '?').slice(0, 1).toUpperCase())}</span>
-          <div class="amistad-info">
-            <b>${escapeHtml(a.nombreCompleto || a.username)}</b>
-            <span class="muted">ID: ${escapeHtml(a.username)}</span>
+        <div style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:12px 13px;">
+          <span style="width:42px;height:42px;border-radius:50%;background:var(--green-100);color:var(--green-800);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;flex:none;">${escapeHtml((a.nombreCompleto || a.username || '?').slice(0, 1).toUpperCase())}</span>
+          <div style="display:flex;flex-direction:column;gap:3px;min-width:0;">
+            <b style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(a.nombreCompleto || a.username)}</b>
+            <span class="muted" style="font-size:12px;">ID: ${escapeHtml(a.username)}</span>
           </div>
         </div>
       `).join('')
-    : `<div class="empty-card"><div class="empty-icon">${ICONS.plus}</div><h3>Aún no tienes amistades</h3><p class="muted">Agrega personas usando su código de amistad.</p></div>`;
+    : `<div class="empty-card" style="padding:26px 16px;"><div class="empty-icon">${ICONS.plus}</div><h3 style="margin:0;">Aún no tienes amistades</h3><p class="muted" style="margin:0;">Agrega personas usando su código de amistad.</p></div>`;
 
   el.innerHTML = `
-    <div class="friend-code-box">
-      <span class="muted">Tu código de amistad</span>
-      <strong>${escapeHtml(codigo)}</strong>
-      <button class="btn-secondary" type="button" onclick="copiarTexto('${escapeHtml(codigo)}')">Copiar código</button>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:5px;background:var(--green-100);border:1px solid #C8E8D2;border-radius:var(--radius-md);padding:15px;text-align:center;">
+      <span class="muted" style="font-size:12px;">Tu código de amistad</span>
+      <strong style="font-family:var(--font-display);font-size:27px;letter-spacing:.12em;color:var(--green-900);">${escapeHtml(codigo)}</strong>
+      <button class="btn-secondary" style="width:auto;padding:8px 14px;margin-top:3px;" type="button" onclick="copiarTexto('${escapeHtml(codigo)}')">Copiar código</button>
       <small class="muted">Comparte este código para que otra persona pueda agregarte.</small>
     </div>
 
-    <button class="btn-primary" style="width:100%;margin-bottom:14px;" type="button" onclick="abrirAgregarAmistad()">
+    <button class="btn-primary" style="width:100%;" type="button" onclick="abrirAgregarAmistad()">
       ${ICONS.plus} Añadir amistad
     </button>
 
-    <div class="amistades-list">${lista}</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">${lista}</div>
   `;
 }
 
