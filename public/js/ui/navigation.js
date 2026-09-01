@@ -1,5 +1,6 @@
 /* ============================================================
-   Riverospay · NAVEGACION: pantallas, modal, drawer, menu por modo
+   Riverospay · NAVEGACION: pantallas, modal, drawer, menú por modo
+   Tanda 6: menú principal y control de contexto.
    ============================================================ */
 
 function showScreen(id) {
@@ -12,8 +13,6 @@ function openModal(title, bodyHtml) {
   $('#modal-body').innerHTML = bodyHtml;
   $('#modal-overlay').classList.add('open');
   $('#modal').classList.add('open');
-  // Los formularios se crean dinámicamente dentro del modal. Darles foco
-  // evita que, tras cerrar/abrir varias veces, el teclado quede sin objetivo.
   setTimeout(() => {
     const first = $('#modal-body').querySelector('input:not([disabled]), textarea:not([disabled]), select:not([disabled])');
     if (first) first.focus({ preventScroll: true });
@@ -27,9 +26,58 @@ function closeModal() {
 function openDrawer() { $('#drawer').classList.add('open'); $('#drawer-overlay').classList.add('open'); }
 function closeDrawer() { $('#drawer').classList.remove('open'); $('#drawer-overlay').classList.remove('open'); }
 
+function prepararDrawerOrganizador() {
+  const drawer = $('#drawer');
+  if (!drawer || $('#drawer-organizador')) return;
+  const item = document.createElement('button');
+  item.className = 'drawer-item';
+  item.id = 'drawer-organizador';
+  item.innerHTML = `${ICONS.home} Organizador`;
+  const referencia = $('#drawer-amistades') || $('#drawer-notificaciones') || $('#drawer-informacion');
+  drawer.insertBefore(item, referencia);
+}
+
+function abrirOrganizador() {
+  closeDrawer();
+
+  // En MODO BOSS, el organizador propio se centra en los trabajos asignados.
+  if (modoActualUsuario() === 'jefe') {
+    STATE.viewMode = 'jefe-historial';
+    STATE.jefeView = null;
+    if (typeof loadHistorial === 'function') loadHistorial();
+    return;
+  }
+
+  STATE.viewMode = 'empleado';
+  STATE.activeTab = null;
+  $all('.tab').forEach(b => b.classList.remove('active'));
+  $('#content').innerHTML = `
+    <div class="empty-card" style="text-align:center;">
+      <div class="empty-icon">${ICONS.home}</div>
+      <h2 style="font-size:20px;margin:6px 0;">Organizador</h2>
+      <p class="muted">Selecciona qué quieres organizar.</p>
+      <div style="display:grid;gap:10px;margin-top:18px;">
+        <button class="btn-primary" type="button" onclick="seleccionarOrganizador('trabajo')">Trabajo</button>
+        <button class="btn-secondary" type="button" onclick="seleccionarOrganizador('estudio')">Estudio</button>
+        <button class="btn-secondary" type="button" onclick="seleccionarOrganizador('evento')">Evento</button>
+      </div>
+    </div>`;
+}
+
+function seleccionarOrganizador(tab) {
+  if (modoActualUsuario() !== 'empleado') return;
+  const btn = document.querySelector(`.tab[data-tab="${tab}"]`);
+  if (!btn) return;
+  $all('.tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  STATE.activeTab = tab;
+  if (tab === 'trabajo') loadTrabajo();
+  else if (tab === 'estudio') loadEstudio();
+  else if (tab === 'evento') loadEventos();
+}
+
 function configurarMenuPorRol() {
-  // Desde la arquitectura de amistades, todas las cuentas tienen acceso a
-  // Amistades y Notificaciones. La antigua Verificación queda fuera del menú.
+  prepararDrawerOrganizador();
   $('#drawer-compartir').classList.add('hidden');
   $('#drawer-verificar').classList.add('hidden');
   $('#drawer-notificaciones').classList.remove('hidden');
