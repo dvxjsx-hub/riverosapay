@@ -20,13 +20,14 @@ async function loadNotificaciones() {
 
 function notifTextoHTML(n) {
   const nombre = n.empleadoNombre || n.empleadoUsername || n.jefeUsername || 'Usuario';
-  if (n.tipo === 'solicitud') return `<b>${escapeHtml(n.jefeUsername || 'JEFE')}</b> quiere verificar tu información.`;
-  if (n.tipo === 'jefe_asignado_trabajo') return `<b>${escapeHtml(nombre)}</b> te asignó como jefe en "${escapeHtml(n.lugar || 'un trabajo')}"${n.fechaTrabajo ? ` para el ${escapeHtml(n.fechaTrabajo)}` : ''}.`;
-  if (n.tipo === 'trabajo_añadido') return `<b>${escapeHtml(n.jefeUsername || 'Tu jefe')}</b> añadió un nuevo trabajo "${escapeHtml(n.lugar || '')}".`;
-  if (n.tipo === 'trabajo_pagado') return `<b>${escapeHtml(n.jefeUsername || 'Tu jefe')}</b> pagó/abonó tu trabajo "${escapeHtml(n.lugar || '')}".`;
-  if (n.tipo === 'jefe_configurado') return `<b>${escapeHtml(n.jefeUsername || 'JEFE')}</b> ha sido configurado.`;
-  if (n.tipo === 'trabajo_eliminado') return `<b>${escapeHtml(n.jefeUsername || 'Tu jefe')}</b> eliminó el trabajo "${escapeHtml(n.lugar || '')}".`;
-  if (n.tipo === 'trabajo_eliminacion_rechazada') return `<b>${escapeHtml(n.jefeUsername || 'Tu jefe')}</b> rechazó tu solicitud para eliminar un trabajo.`;
+  if (n.tipo === 'solicitud') return `<b>${escapeHtml(n.jefeUsername || 'BOSS')}</b> quiere verificar tu información.`;
+  if (n.tipo === 'jefe_asignado_trabajo') return `<b>${escapeHtml(nombre)}</b> te asignó como BOSS en "${escapeHtml(n.lugar || 'un trabajo')}"${n.fechaTrabajo ? ` para el ${escapeHtml(n.fechaTrabajo)}` : ''}.`;
+  if (n.tipo === 'trabajo_eliminacion_solicitada') return `<b>${escapeHtml(nombre)}</b> solicita eliminar el trabajo "${escapeHtml(n.lugar || '')}"${n.fechaTrabajo ? ` del ${escapeHtml(n.fechaTrabajo)}` : ''}. Entra al trabajo para confirmar o rechazar.`;
+  if (n.tipo === 'trabajo_añadido') return `<b>${escapeHtml(n.jefeUsername || 'Tu BOSS')}</b> añadió un nuevo trabajo "${escapeHtml(n.lugar || '')}".`;
+  if (n.tipo === 'trabajo_pagado') return `<b>${escapeHtml(n.jefeUsername || 'Tu BOSS')}</b> pagó/abonó tu trabajo "${escapeHtml(n.lugar || '')}".`;
+  if (n.tipo === 'jefe_configurado') return `<b>${escapeHtml(n.jefeUsername || 'BOSS')}</b> ha sido configurado.`;
+  if (n.tipo === 'trabajo_eliminado') return `<b>${escapeHtml(n.jefeUsername || 'Tu BOSS')}</b> eliminó el trabajo "${escapeHtml(n.lugar || '')}".`;
+  if (n.tipo === 'trabajo_eliminacion_rechazada') return `<b>${escapeHtml(n.jefeUsername || 'Tu BOSS')}</b> rechazó tu solicitud para eliminar un trabajo.`;
   return escapeHtml(nombre);
 }
 
