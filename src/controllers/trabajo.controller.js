@@ -1,36 +1,39 @@
 const { save } = require('../config/db');
 const trabajo = require('../models/trabajo.model');
+const amistades = require('../models/amistades.model');
 const verificacion = require('../models/verificacion.model');
 const notificaciones = require('../models/notificaciones.model');
+const usuarios = require('../models/usuarios.model');
 const { newId } = require('../utils/utils');
-
-// Nota: cualquiera con el empleadoId correcto puede añadir/editar turnos
-// (así el EMPLEADO añade los suyos y el JEFE, una vez verificado, también
-// puede añadir trabajos y es quien marca pagado/valor desde su vista).
 
 async function obtenerSnapshot(req, res) {
   res.json(trabajo.snapshot(req.params.empleadoId));
 }
 
-// jefes ya verificados (link aceptado) para un empleado — usado en "¿Añadir jefe?"
 async function obtenerMisJefes(req, res) {
   res.json(trabajo.misJefes(req.params.empleadoId));
 }
 
 async function crearTurno(req, res) {
   const empleadoId = req.params.empleadoId;
-  const { lugar, dia, horaInicio, horaFin, descripcion, jefeAsignadoId, actorJefeId, actorJefeUsername } = req.body || {};
+  const { lugar, fecha, dia, horaInicio, horaFin, descripcion, jefeAsignadoId, actorJefeId, actorJefeUsername } = req.body || {};
   const nombreLugar = (lugar || '').trim();
-  if (!nombreLugar || !dia || !horaInicio || !horaFin) {
-    return res.status(400).json({ error: 'Faltan datos del trabajo (lugar, día u hora).' });
+  if (!nombreLugar || !fecha || !horaInicio || !horaFin) {
+    return res.status(400).json({ error: 'Faltan datos del trabajo (lugar, fecha u hora).' });
   }
-  const lug = trabajo.buscarOCrearLugar(empleadoId, nombreLugar);
-  // si lo añade el JEFE, el trabajo queda asignado automáticamente a ese jefe;
-  // si lo añade el EMPLEADO, respeta lo que haya elegido en "¿Añadir jefe?"
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    return res.status(400).json({ error: 'La fecha del trabajo no es válida.' });
+  }
+
   const asignado = actorJefeId ? actorJefeId : (jefeAsignadoId || null);
+  if (asignado && asignado !== empleadoId && !amistades.existe(empleadoId, asignado)) {
+    return res.status(400).json({ error: 'El jefe seleccionado debe ser una de tus amistades.' });
+  }
+
+  const lug = trabajo.buscarOCrearLugar(empleadoId, nombreLugar);
   const turno = {
     id: newId('trn'), empleadoId, lugarId: lug.id,
-    dia, horaInicio, horaFin,
+    fecha, dia: dia || '', horaInicio, horaFin,
     descripcion: (descripcion || '').trim(),
     pagado: false, valor: null,
     jefeAsignadoId: asignado, eliminacionPendiente: false
@@ -38,8 +41,18 @@ async function crearTurno(req, res) {
   trabajo.crearTurno(turno);
   await save();
   trabajo.broadcast(empleadoId);
+
+  if (asignado && asignado !== empleadoId && !actorJefeId) {
+    const empleado = usuarios.buscarPorId(empleadoId);
+    await notificaciones.crearParaUsuario(asignado, 'jefe_asignado_trabajo', {
+      empleadoUsername: empleado ? empleado.username : '',
+      empleadoNombre: empleado ? (empleado.nombreCompleto || empleado.username) : '',
+      lugar: lug.nombre,
+      fechaTrabajo: fecha
+    });
+  }
   if (actorJefeId && actorJefeId !== empleadoId) {
-    await notificaciones.crear(empleadoId, 'trabajo_añadido', { jefeUsername: actorJefeUsername || 'Tu jefe', lugar: lug.nombre });
+    await notificaciones.crearParaUsuario(empleadoId, 'trabajo_añadido', { jefeUsername: actorJefeUsername || 'Tu jefe', lugar: lug.nombre });
   }
   res.json({ lugar: lug, turno });
 }
@@ -47,23 +60,39 @@ async function crearTurno(req, res) {
 async function actualizarTurno(req, res) {
   const turno = trabajo.buscarTurnoPorId(req.params.turnoId);
   if (!turno) return res.status(404).json({ error: 'Trabajo no encontrado.' });
+  const anteriorJefe = turno.jefeAsignadoId || null;
   const yaEstabaPagado = turno.pagado;
+
   if (typeof req.body.pagado === 'boolean') turno.pagado = req.body.pagado;
   if (req.body.valor !== undefined) turno.valor = req.body.valor;
-  if (req.body.jefeAsignadoId !== undefined) turno.jefeAsignadoId = req.body.jefeAsignadoId || null;
+  if (req.body.jefeAsignadoId !== undefined) {
+    const nuevoJefe = req.body.jefeAsignadoId || null;
+    if (nuevoJefe && nuevoJefe !== turno.empleadoId && !amistades.existe(turno.empleadoId, nuevoJefe)) {
+      return res.status(400).json({ error: 'El jefe seleccionado debe ser una de las amistades del usuario.' });
+    }
+    turno.jefeAsignadoId = nuevoJefe;
+  }
+
   await save();
   trabajo.broadcast(turno.empleadoId);
+
   if (turno.pagado && !yaEstabaPagado && req.body.actorJefeUsername) {
     const lug = trabajo.buscarLugarPorId(turno.lugarId);
-    await notificaciones.crear(turno.empleadoId, 'trabajo_pagado', { jefeUsername: req.body.actorJefeUsername, lugar: lug ? lug.nombre : '' });
+    await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_pagado', { jefeUsername: req.body.actorJefeUsername, lugar: lug ? lug.nombre : '' });
+  }
+
+  if (req.body.jefeAsignadoId !== undefined && anteriorJefe !== turno.jefeAsignadoId && turno.jefeAsignadoId && turno.jefeAsignadoId !== turno.empleadoId) {
+    const empleado = usuarios.buscarPorId(turno.empleadoId);
+    const lug = trabajo.buscarLugarPorId(turno.lugarId);
+    await notificaciones.crearParaUsuario(turno.jefeAsignadoId, 'jefe_asignado_trabajo', {
+      empleadoUsername: empleado ? empleado.username : '',
+      empleadoNombre: empleado ? (empleado.nombreCompleto || empleado.username) : '',
+      lugar: lug ? lug.nombre : '', fechaTrabajo: turno.fecha || ''
+    });
   }
   res.json(turno);
 }
 
-// Borrar un trabajo:
-//  - JEFE: siempre puede borrarlo directo (esté pagado o no).
-//  - EMPLEADO: si está PAGADO, o si el trabajo no tiene jefe asignado, lo borra directo.
-//              si NO está pagado y sí tiene jefe asignado, queda pendiente hasta que el jefe lo confirme.
 async function eliminarTurno(req, res) {
   const turno = trabajo.buscarTurnoPorId(req.params.turnoId);
   if (!turno) return res.status(404).json({ error: 'Trabajo no encontrado.' });
@@ -75,11 +104,10 @@ async function eliminarTurno(req, res) {
     trabajo.eliminarTurno(turno.id);
     await save();
     trabajo.broadcast(turno.empleadoId);
-    await notificaciones.crear(turno.empleadoId, 'trabajo_eliminado', { jefeUsername: req.body.actorJefeUsername || 'Tu jefe', lugar: lug ? lug.nombre : '' });
+    await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_eliminado', { jefeUsername: req.body.actorJefeUsername || 'Tu jefe', lugar: lug ? lug.nombre : '' });
     return res.json({ eliminado: true });
   }
 
-  // actorRole === 'empleado'
   if (turno.pagado || !turno.jefeAsignadoId) {
     trabajo.eliminarTurno(turno.id);
     await save();
@@ -101,7 +129,7 @@ async function confirmarEliminacion(req, res) {
   trabajo.eliminarTurno(turno.id);
   await save();
   trabajo.broadcast(turno.empleadoId);
-  await notificaciones.crear(turno.empleadoId, 'trabajo_eliminado', { jefeUsername: req.body.jefeUsername || 'Tu jefe', lugar: lug ? lug.nombre : '' });
+  await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_eliminado', { jefeUsername: req.body.jefeUsername || 'Tu jefe', lugar: lug ? lug.nombre : '' });
   res.json({ eliminado: true });
 }
 
@@ -113,7 +141,7 @@ async function rechazarEliminacion(req, res) {
   turno.eliminacionPendiente = false;
   await save();
   trabajo.broadcast(turno.empleadoId);
-  await notificaciones.crear(turno.empleadoId, 'trabajo_eliminacion_rechazada', { jefeUsername: req.body.jefeUsername || 'Tu jefe' });
+  await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_eliminacion_rechazada', { jefeUsername: req.body.jefeUsername || 'Tu jefe' });
   res.json({ eliminado: false });
 }
 
