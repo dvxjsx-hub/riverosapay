@@ -14,13 +14,13 @@ function renderHistorial() {
     return;
   }
   const cards = STATE.historial.map(l => `
-    <button class="historial-card" onclick="abrirDesdeHistorial('${l.empleadoId}')">
-      <span class="historial-avatar">${escapeHtml((l.empleadoNombre || l.empleadoUsername || '?').slice(0, 1).toUpperCase())}</span>
-      <span class="historial-info">
-        <div class="historial-nombre">${escapeHtml(l.empleadoNombre || l.empleadoUsername)}</div>
-        <div class="historial-fecha">${l.turnos.length} trabajo${l.turnos.length === 1 ? '' : 's'} asignado${l.turnos.length === 1 ? '' : 's'}</div>
-      </span>
-    </button>`).join('');
+      <button class="historial-card" onclick="abrirDesdeHistorial('${l.empleadoId}')">
+        <span class="historial-avatar">${escapeHtml((l.empleadoNombre || l.empleadoUsername || '?').slice(0, 1).toUpperCase())}</span>
+        <span class="historial-info">
+          <div class="historial-nombre">${escapeHtml(l.empleadoNombre || l.empleadoUsername)}</div>
+          <div class="historial-fecha">${l.turnos.length} trabajo${l.turnos.length === 1 ? '' : 's'} asignado${l.turnos.length === 1 ? '' : 's'}</div>
+        </span>
+      </button>`).join('');
   $('#content').innerHTML = cards;
 }
 
@@ -35,6 +35,9 @@ async function abrirDesdeHistorial(empleadoId) {
     activeSubTab: 'trabajo'
   };
   STATE.viewMode = 'jefe-ver';
+  trabajoVistaActual = TRABAJO_VISTAS.HORARIOS;
+  trabajoFiltroJefe = null;
+  trabajoFiltroPago = 'todos';
   await cambiarSubTabJefe('trabajo');
 }
 
@@ -66,8 +69,9 @@ function renderJefeView() {
   const subtabsHtml = `<div class="subtabs"><button class="subtab ${sub === 'trabajo' ? 'active' : ''}" onclick="cambiarSubTabJefe('trabajo')">Trabajo</button>${mostrarEstudio ? `<button class="subtab ${sub === 'estudio' ? 'active' : ''}" onclick="cambiarSubTabJefe('estudio')">Estudio</button>` : ''}<button class="subtab ${sub === 'evento' ? 'active' : ''}" onclick="cambiarSubTabJefe('evento')">Evento</button></div>`;
   let body = '';
   if (sub === 'trabajo') {
+    const selector = `<div style="margin-bottom:10px;"><button class="trabajo-vista-selector" style="width:100%;display:flex;justify-content:space-between;align-items:center;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius-md);padding:14px 16px;color:var(--green-900);font-family:var(--font-display);font-weight:700;font-size:15px;cursor:pointer;" type="button" onclick="abrirSelectorTrabajo()"><span>${trabajoVistaActual === TRABAJO_VISTAS.HORARIOS ? 'Horarios' : 'Finalizados'}</span><span>⌄</span></button></div>`;
     const propios = trabajoDelJefeFiltrado(d);
-    body = propios.lugares.length ? trabajoListHTML(propios) : emptyCardHTML('TRABAJO', 'No tienes trabajos asignados de este usuario.', 'trabajo');
+    body = selector + (propios.lugares.length ? trabajoListHTML(propios) : emptyCardHTML('TRABAJO', trabajoVistaActual === TRABAJO_VISTAS.FINALIZADOS ? 'No tienes trabajos finalizados asignados de este usuario.' : 'No tienes trabajos próximos asignados de este usuario.', 'trabajo'));
   } else if (sub === 'estudio') {
     const btnPendientes = `<button class="btn-add" onclick="openPendientes()">${ICONS.estudio} Ver actividades pendientes</button>`;
     body = estudioGridHTML(d.materias || [], false) + btnPendientes;
