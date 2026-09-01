@@ -106,8 +106,8 @@ function setupModal() {
   $('#modal-overlay').addEventListener('click', closeModal);
 }
 
-// En la vista de un jefe, él mismo no necesita estar en su propia lista de
-// amistades para aparecer como el jefe asignado de un trabajo.
+// En la vista de un BOSS, él mismo no necesita estar en su propia lista de
+// amistades para aparecer como el BOSS asignado de un trabajo.
 function nombreJefePorId(id) {
   if (!id) return null;
   if (STATE.viewMode === 'jefe-ver' && STATE.user && id === STATE.user.id) {
@@ -116,6 +116,153 @@ function nombreJefePorId(id) {
   const amigos = STATE.amistades || [];
   const a = amigos.find(x => x.id === id);
   return a ? (a.nombreCompleto || a.username) : null;
+}
+
+/* ============================================================
+   TANDA 5 — ajustes de interfaz y seguridad de Trabajo.
+   Se mantienen las funciones originales y se envuelven aquí para
+   no duplicar la lógica de Trabajo.
+   ============================================================ */
+
+function normalizarTextoBossEnModal(pares) {
+  const title = $('#modal-title');
+  if (title) {
+    const original = title.textContent.trim();
+    const reemplazo = pares[original];
+    if (reemplazo) title.textContent = reemplazo;
+  }
+  const body = $('#modal-body');
+  if (!body) return;
+  const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+  const nodos = [];
+  let node;
+  while ((node = walker.nextNode())) nodos.push(node);
+  nodos.forEach(n => {
+    const t = n.nodeValue.trim();
+    const reemplazo = pares[t];
+    if (reemplazo) n.nodeValue = n.nodeValue.replace(t, reemplazo);
+  });
+}
+
+function aplicarEstiloSelectorTrabajo() {
+  const selector = document.querySelector('.trabajo-vista-selector');
+  if (!selector) return;
+  selector.style.background = 'rgba(21,92,49,.08)';
+  selector.style.color = 'var(--green-900)';
+  selector.style.border = '1.5px solid var(--line)';
+}
+
+const _renderTrabajoT5 = typeof renderTrabajo === 'function' ? renderTrabajo : null;
+if (_renderTrabajoT5) {
+  renderTrabajo = function() {
+    _renderTrabajoT5();
+    aplicarEstiloSelectorTrabajo();
+  };
+}
+
+const _renderJefeViewT5 = typeof renderJefeView === 'function' ? renderJefeView : null;
+if (_renderJefeViewT5) {
+  renderJefeView = function() {
+    _renderJefeViewT5();
+    aplicarEstiloSelectorTrabajo();
+  };
+}
+
+function abrirSelectorTrabajo() {
+  const actual = trabajoVistaActual === TRABAJO_VISTAS.HORARIOS ? 'Horarios' : 'Finalizados';
+  const opcion = (vista, texto) => `<button class="btn-secondary" type="button" style="width:100%;margin-top:8px;background:rgba(21,92,49,.08);color:var(--green-900);border:1.5px solid var(--line);font-weight:700;" onclick="cambiarVistaTrabajo('${vista}')">${texto}${actual === texto ? ' ✓' : ''}</button>`;
+  openModal('Trabajo', `${opcion('horarios', 'Horarios')}${opcion('finalizados', 'Finalizados')}`);
+}
+
+const _abrirAccionesTrabajoT5 = typeof abrirAccionesTrabajo === 'function' ? abrirAccionesTrabajo : null;
+if (_abrirAccionesTrabajoT5) {
+  abrirAccionesTrabajo = function() {
+    _abrirAccionesTrabajoT5();
+    const botones = document.querySelectorAll('#modal-body button');
+    botones.forEach(btn => {
+      if (btn.textContent.trim() === 'Filtrar por jefe') btn.textContent = 'Filtrar por BOSS';
+    });
+  };
+}
+
+const _abrirFiltroJefeT5 = typeof abrirFiltroJefe === 'function' ? abrirFiltroJefe : null;
+if (_abrirFiltroJefeT5) {
+  abrirFiltroJefe = async function(...args) {
+    await _abrirFiltroJefeT5(...args);
+    normalizarTextoBossEnModal({
+      'Filtrar por jefe': 'Filtrar por BOSS',
+      'Selecciona un jefe': 'Selecciona un BOSS',
+      'Todos los jefes': 'Todos los BOSS',
+      'No hay jefes registrados en tus trabajos.': 'No hay BOSS registrados en tus trabajos.'
+    });
+  };
+}
+
+const _openAddTrabajoT5 = typeof openAddTrabajo === 'function' ? openAddTrabajo : null;
+if (_openAddTrabajoT5) {
+  openAddTrabajo = async function(...args) {
+    await _openAddTrabajoT5(...args);
+    normalizarTextoBossEnModal({
+      'Jefe (amistad)': 'BOSS (amistad)',
+      'El jefe se selecciona únicamente entre tus amistades.': 'El BOSS se selecciona únicamente entre tus amistades.'
+    });
+  };
+}
+
+const _openTurnoDetailT5 = typeof openTurnoDetail === 'function' ? openTurnoDetail : null;
+if (_openTurnoDetailT5) {
+  openTurnoDetail = function(...args) {
+    _openTurnoDetailT5(...args);
+    normalizarTextoBossEnModal({
+      'Jefe': 'BOSS',
+      'Sin jefe': 'Sin BOSS'
+    });
+  };
+}
+
+const _abrirCambiarJefeT5 = typeof abrirCambiarJefe === 'function' ? abrirCambiarJefe : null;
+if (_abrirCambiarJefeT5) {
+  abrirCambiarJefe = async function(...args) {
+    await _abrirCambiarJefeT5(...args);
+    normalizarTextoBossEnModal({
+      'Cambiar jefe asignado': 'Cambiar BOSS asignado',
+      'Jefe': 'BOSS'
+    });
+  };
+}
+
+// Las acciones de pago y valor solo pueden ejecutarse desde el BOSS asignado.
+const _setPagadoT5 = typeof setPagado === 'function' ? setPagado : null;
+if (_setPagadoT5) {
+  setPagado = async function(turnoId, pagado) {
+    try {
+      await api.patch(`/api/trabajo/turnos/${turnoId}`, {
+        pagado,
+        actorJefeId: STATE.user.id,
+        actorJefeUsername: STATE.user.username
+      });
+      toast(pagado ? 'Marcado como pagado' : 'Marcado como no pagado');
+      await refrescarJefeTrabajo();
+      openTurnoDetail(turnoId);
+    } catch (ex) { toast(ex.message); }
+  };
+}
+
+const _guardarValorT5 = typeof guardarValor === 'function' ? guardarValor : null;
+if (_guardarValorT5) {
+  guardarValor = async function(turnoId) {
+    const raw = $('#f-valor')?.value;
+    try {
+      await api.patch(`/api/trabajo/turnos/${turnoId}`, {
+        valor: raw === '' ? null : Number(raw),
+        actorJefeId: STATE.user.id,
+        actorJefeUsername: STATE.user.username
+      });
+      toast('Valor guardado');
+      await refrescarJefeTrabajo();
+      openTurnoDetail(turnoId);
+    } catch (ex) { toast(ex.message); }
+  };
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
