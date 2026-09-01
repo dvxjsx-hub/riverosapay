@@ -7,7 +7,9 @@ function cuentas(req, res) {
     id: u.id,
     username: u.username,
     nombreCompleto: u.nombreCompleto || null,
-    createdAt: u.createdAt || null
+    createdAt: u.createdAt || null,
+    lastLoginAt: u.lastLoginAt || null,
+    recoveryConfigured: Boolean(u.recoveryCodeHash)
   }));
   res.json({ cuentas: lista });
 }
