@@ -1,5 +1,5 @@
 /* ============================================================
-   Riverospay · MODO JEFE
+   Riverospay · MODO BOSS
    Los trabajos llegan por amistad + asignación de jefe.
    ============================================================ */
 
@@ -10,7 +10,7 @@ async function loadHistorial() {
 
 function renderHistorial() {
   if (!STATE.historial.length) {
-    $('#content').innerHTML = emptyCardHTML('MODO JEFE', 'Aún no tienes trabajos asignados.', 'historial');
+    $('#content').innerHTML = emptyCardHTML('MODO BOSS', 'Aún no tienes trabajos asignados.', 'historial');
     return;
   }
   const cards = STATE.historial.map(l => `
