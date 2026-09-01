@@ -64,21 +64,30 @@ function actualizarHeaderUsuario() {
 function openPerfil() {
   const modo = modoActualUsuario();
   const modoTexto = modo === 'jefe' ? 'MODO JEFE' : 'MODO EMPLEADO';
-  const siguienteModo = modo === 'jefe' ? 'empleado' : 'jefe';
-  const siguienteTexto = siguienteModo === 'jefe' ? 'Cambiar a modo jefe' : 'Cambiar a modo empleado';
 
   openModal('Tu perfil', `
     <div style="display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;">
       <div class="empty-icon" style="width:76px;height:76px;">
-        <svg viewBox="0 0 24 24" fill="currentColor" style="width:40px;height:40px;"><circle cx="12" cy="8.2" r="4"/><path d="M4 20c0-4.4 4-6.6 8-6.6s8 2.2 8 6.6"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:40px;height:40px;"><circle cx="12" cy="8.2" r="4"/><path d="M4 20c0-4.4 3.6-6.6 8-6.6s8 2.2 8 6.6"/></svg>
       </div>
       <h2 style="margin:6px 0 0;font-size:19px;">${escapeHtml(nombreMostrado())}</h2>
-      <span class="chip">${modoTexto}</span>
+      <button type="button" class="chip" style="border:0;cursor:pointer;font:inherit;" onclick="abrirSelectorModo()">${modoTexto}</button>
     </div>
     <div class="detail-row"><span>ID</span><span>${escapeHtml(STATE.user.username)}</span></div>
     ${!STATE.user.nombreCompleto ? `<button class="btn-secondary" onclick="renderNombreFormulario('perfil')">Configurar nombre</button>` : ''}
-    <button class="btn-secondary" style="width:100%;margin-top:10px;" onclick="cambiarModoCuenta('${siguienteModo}')">${siguienteTexto}</button>
     <button class="btn-ghost-danger" style="width:100%;margin-top:10px;" onclick="pedirConfirmacionEliminarCuenta()">Eliminar cuenta</button>
+  `);
+}
+
+function abrirSelectorModo() {
+  const modoActual = modoActualUsuario();
+  const siguienteModo = modoActual === 'jefe' ? 'empleado' : 'jefe';
+  const siguienteTexto = siguienteModo === 'jefe' ? 'Modo jefe' : 'Modo empleado';
+
+  openModal('¿Quieres cambiar modo?', `
+    <p class="muted" style="text-align:center;margin:0 0 18px;">Modo actual: <b>${modoActual === 'jefe' ? 'Modo jefe' : 'Modo empleado'}</b></p>
+    <button class="btn-primary" style="width:100%;" onclick="cambiarModoCuenta('${siguienteModo}')">${siguienteTexto}</button>
+    <button class="link-btn" style="width:100%;margin-top:8px;" onclick="openPerfil()">Cancelar</button>
   `);
 }
 
@@ -87,9 +96,6 @@ async function cambiarModoCuenta(modo) {
     const user = await api.post('/api/auth/cambiar-modo', { userId: STATE.user.id, modo });
     STATE.user = user;
     closeModal();
-
-    // Cambiar de modo también cambia la sala Socket.IO. Reconectamos para no
-    // conservar la sala del modo anterior.
     if (STATE.socket) {
       STATE.socket.disconnect();
       STATE.socket = null;
