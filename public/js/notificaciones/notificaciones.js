@@ -1,11 +1,21 @@
 /* ============================================================
    Riverospay · NOTIFICACIONES
-   Cada modo conserva sus notificaciones porque pertenecen a la
-   misma cuenta, pero el contenido puede cambiar según el modo.
+   Las notificaciones se separan por modo: EMPLEADO / BOSS.
    ============================================================ */
 
+function modoDestinoNotificacion(n) {
+  if (n && (n.modoDestino === 'jefe' || n.modoDestino === 'empleado')) return n.modoDestino;
+  if (n && (n.tipo === 'jefe_asignado_trabajo' || n.tipo === 'trabajo_eliminacion_solicitada')) return 'jefe';
+  return 'empleado';
+}
+
+function notificacionesDelModoActual() {
+  const modo = modoActualUsuario();
+  return (STATE.notificaciones || []).filter(n => modoDestinoNotificacion(n) === modo);
+}
+
 function updateNotifBadge() {
-  const hayAlgoPendiente = (STATE.notificaciones || []).some(n =>
+  const hayAlgoPendiente = notificacionesDelModoActual().some(n =>
     (n.tipo === 'solicitud' && n.estado === 'pendiente') || (n.tipo !== 'solicitud' && !n.leida)
   );
   const dot = $('#notif-dot');
@@ -35,17 +45,22 @@ async function openNotificaciones() {
   try {
     await loadNotificaciones();
     renderNotificacionesModal();
-    const huboSinLeer = STATE.notificaciones.some(n => n.tipo !== 'solicitud' && !n.leida);
+    const visibles = notificacionesDelModoActual();
+    const huboSinLeer = visibles.some(n => n.tipo !== 'solicitud' && !n.leida);
     if (huboSinLeer) {
-      await api.post(`/api/notificaciones/${STATE.user.id}/marcar-leidas`, {});
-      STATE.notificaciones.forEach(n => { if (n.tipo !== 'solicitud') n.leida = true; });
+      await api.post(`/api/notificaciones/${STATE.user.id}/marcar-leidas`, { modo: modoActualUsuario() });
+      const modo = modoActualUsuario();
+      STATE.notificaciones.forEach(n => {
+        if (modoDestinoNotificacion(n) === modo && n.tipo !== 'solicitud') n.leida = true;
+      });
       updateNotifBadge();
     }
   } catch (ex) { toast(ex.message); }
 }
 
 function renderNotificacionesModal() {
-  const list = STATE.notificaciones || [];
+  const list = notificacionesDelModoActual();
+  const modoTitulo = modoActualUsuario() === 'jefe' ? 'BOSS' : 'EMPLEADO';
   const html = list.length ? list.map(n => `
     <div class="notif-row">
       <span class="notif-text">${notifTextoHTML(n)}</span>
@@ -53,8 +68,8 @@ function renderNotificacionesModal() {
       ${n.tipo === 'solicitud' && n.estado === 'pendiente'
         ? `<div class="notif-actions"><button class="btn-ghost-danger" onclick="responderSolicitudId('${n.id}','rechazar')">Rechazar</button><button class="btn-primary" onclick="responderSolicitudId('${n.id}','aceptar')">Aceptar</button></div>`
         : (n.tipo === 'solicitud' ? `<span class="notif-badge ${n.estado}">Rechazada</span>` : '')}
-    </div>`).join('') : emptyCardHTML('NOTIFICACIONES', 'No tienes notificaciones por ahora.', 'historial');
-  openModal('Notificaciones', html);
+    </div>`).join('') : emptyCardHTML('NOTIFICACIONES · ' + modoTitulo, 'No tienes notificaciones por ahora.', 'historial');
+  openModal('Notificaciones · ' + modoTitulo, html);
 }
 
 async function responderSolicitudId(id, accion) {
