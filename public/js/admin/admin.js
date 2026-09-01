@@ -33,7 +33,7 @@ function asegurarPantallaAdmin() {
     </div>
     <main class="admin-body">
       <h1>Cuentas</h1>
-      <p class="admin-sub">Usuarios registrados en Riverospay</p>
+      <p class="admin-sub">Usuarios registrados en RiveroZapay</p>
       <div id="admin-cuentas"></div>
       <button id="admin-logout" class="admin-logout" type="button">Cerrar sesión</button>
     </main>
@@ -64,7 +64,7 @@ async function cargarCuentasAdmin() {
     cont.innerHTML = cuentas.map(u => `
       <article class="admin-account">
         <div class="admin-account-name">${escapeHtml(u.nombreCompleto || 'Sin nombre configurado')}</div>
-        <div class="admin-account-meta">Usuario: ${escapeHtml(u.username)}<br>ID: ${escapeHtml(u.id)}<br>Creada: ${formatAdminDate(u.createdAt)}</div>
+        <div class="admin-account-meta">Usuario: ${escapeHtml(u.username)}<br>ID: ${escapeHtml(u.id)}<br>Creada: ${formatAdminDate(u.createdAt)}<br>Última conexión: ${formatAdminDate(u.lastLoginAt)}<br>Recuperación: ${u.recoveryConfigured ? 'Configurada' : 'No configurada'}</div>
         <button type="button" data-admin-delete="${escapeHtml(u.id)}">Eliminar cuenta</button>
       </article>
     `).join('');
