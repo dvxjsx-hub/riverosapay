@@ -1,8 +1,12 @@
 const express = require('express');
 const verificacion = require('../controllers/verificacion.controller');
 const ah = require('../middleware/asyncHandler');
+const { requireUser } = require('../middleware/session');
 
 const router = express.Router();
+
+// Defensa en profundidad: toda esta área pertenece a usuarios autenticados.
+router.use(requireUser);
 
 router.get('/share/:empleadoId', ah(verificacion.obtenerCodigo));
 router.post('/verificar', ah(verificacion.enviarSolicitud));
