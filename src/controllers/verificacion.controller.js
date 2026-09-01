@@ -55,7 +55,6 @@ async function datosEmpleado(req, res) {
 }
 
 // Hasta que exista una opción explícita del empleado, Estudio y Evento no se exponen al BOSS.
-// Esto evita que el antiguo vínculo de verificación desbloquee acceso antes de que el empleado lo autorice.
 async function estudioEmpleado(req, res) {
   return res.status(403).json({ error: 'El acceso BOSS a Estudio todavía no está habilitado por el empleado.' });
 }
