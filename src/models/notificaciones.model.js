@@ -1,27 +1,32 @@
-const { db } = require('../config/db');
-const { save } = require('../config/db');
+const { db, save } = require('../config/db');
 const { getIO } = require('../realtime/io');
 const { newId } = require('../utils/utils');
 
-// crea una notificación de info (no confundir con las solicitudes de verificación)
-async function crear(empleadoId, tipo, extra) {
-  const notif = { id: newId('not'), empleadoId, tipo, fecha: Date.now(), leida: false, ...extra };
+// Las notificaciones nuevas pertenecen a un usuario, sin depender de su modo.
+// empleadoId se conserva en notificaciones antiguas por compatibilidad.
+async function crearParaUsuario(usuarioId, tipo, extra = {}) {
+  const notif = { id: newId('not'), usuarioId, tipo, fecha: Date.now(), leida: false, ...extra };
   db.notificaciones.push(notif);
   await save();
-  getIO().to('emp-' + empleadoId).emit('notificaciones:update');
+  getIO().to('emp-' + usuarioId).emit('notificaciones:update');
+  getIO().to('jefe-' + usuarioId).emit('notificaciones:update');
   return notif;
 }
 
-function listaCompleta(empleadoId) {
+async function crear(empleadoId, tipo, extra) {
+  return crearParaUsuario(empleadoId, tipo, { empleadoId, ...extra });
+}
+
+function listaCompleta(usuarioId) {
   const joinRequestsModel = require('./verificacion.model');
-  const solicitudes = joinRequestsModel.solicitudesNoAceptadas(empleadoId)
+  const solicitudes = joinRequestsModel.solicitudesNoAceptadas(usuarioId)
     .map(r => ({ id: r.id, tipo: 'solicitud', estado: r.estado, jefeUsername: r.jefeUsername, fecha: r.fecha, leida: true }));
-  const infos = db.notificaciones.filter(n => n.empleadoId === empleadoId);
+  const infos = db.notificaciones.filter(n => n.usuarioId === usuarioId || n.empleadoId === usuarioId);
   return [...solicitudes, ...infos].sort((a, b) => b.fecha - a.fecha);
 }
 
-function marcarLeidas(empleadoId) {
-  db.notificaciones.filter(n => n.empleadoId === empleadoId).forEach(n => { n.leida = true; });
+function marcarLeidas(usuarioId) {
+  db.notificaciones.filter(n => n.usuarioId === usuarioId || n.empleadoId === usuarioId).forEach(n => { n.leida = true; });
 }
 
-module.exports = { crear, listaCompleta, marcarLeidas };
+module.exports = { crear, crearParaUsuario, listaCompleta, marcarLeidas };
