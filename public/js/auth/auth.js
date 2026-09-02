@@ -2,6 +2,31 @@
    Riverospay · AUTENTICACION: splash, login/registro, recuperar contraseña
    ============================================================ */
 
+const CLAVE_USUARIO_REGEX = /^\d{6}$/;
+
+function configurarCamposClave6() {
+  ['#reg-pass', '#reg-pass2', '#f-rec-pass'].forEach(selector => {
+    const campo = $(selector);
+    if (!campo) return;
+    campo.inputMode = 'numeric';
+    campo.pattern = '[0-9]{6}';
+    campo.minLength = 6;
+    campo.maxLength = 6;
+    campo.autocomplete = selector === '#f-rec-pass' ? 'new-password' : campo.autocomplete;
+    campo.placeholder = selector === '#f-rec-pass' ? '6 dígitos' : '6 dígitos';
+  });
+
+  // El login es compartido con Admin: NO poner maxlength aquí.
+  const login = $('#log-pass');
+  if (login) {
+    login.inputMode = 'numeric';
+    login.pattern = '[0-9]+';
+    login.removeAttribute('maxlength');
+    login.removeAttribute('minlength');
+    login.placeholder = '6 dígitos';
+  }
+}
+
 function initSplash() { setTimeout(goToAuth, 2200); }
 
 function goToAuth() {
@@ -9,6 +34,7 @@ function goToAuth() {
   const lastUser = localStorage.getItem('riverospay_last_user');
   if (lastUser) { setAuthMode('login'); $('#log-user').value = lastUser; }
   else setAuthMode('register');
+  configurarCamposClave6();
   setTimeout(() => { const campo = lastUser ? $('#log-user') : $('#reg-user'); campo?.focus({ preventScroll: true }); }, 80);
 }
 
@@ -22,6 +48,7 @@ function setAuthMode(mode) {
   $('#auth-toggle').dataset.next = isLogin ? 'register' : 'login';
   $('#reg-error').textContent = '';
   $('#log-error').textContent = '';
+  setTimeout(configurarCamposClave6, 0);
 }
 
 function cargarModuloAdmin() {
@@ -36,6 +63,8 @@ function cargarModuloAdmin() {
 }
 
 function setupAuth() {
+  configurarCamposClave6();
+
   $('#auth-toggle').addEventListener('click', () => setAuthMode($('#auth-toggle').dataset.next));
   $('#auth-reset').addEventListener('click', () => {
     localStorage.removeItem('riverospay_last_user');
@@ -48,8 +77,8 @@ function setupAuth() {
     e.preventDefault();
     const username = $('#reg-user').value.trim(), pass = $('#reg-pass').value, pass2 = $('#reg-pass2').value, err = $('#reg-error');
     if (!/^[a-z]{5,10}$/.test(username)) { err.textContent = 'El usuario debe tener de 5 a 10 letras minúsculas, sin números ni símbolos.'; return; }
-    if (!/^[A-Za-z0-9]{6,12}$/.test(pass)) { err.textContent = 'La contraseña debe tener de 6 a 12 caracteres (letras y números).'; return; }
-    if (pass !== pass2) { err.textContent = 'Las contraseñas no coinciden.'; return; }
+    if (!CLAVE_USUARIO_REGEX.test(pass)) { err.textContent = 'La clave debe tener exactamente 6 dígitos.'; return; }
+    if (pass !== pass2) { err.textContent = 'Las claves no coinciden.'; return; }
     err.textContent = '';
     try {
       const user = await api.post('/api/auth/register', { username, password: pass });
@@ -62,6 +91,8 @@ function setupAuth() {
     e.preventDefault();
     const username = $('#log-user').value.trim(), pass = $('#log-pass').value, err = $('#log-error');
     try {
+      // No validamos aquí a 6 caracteres: Admin puede usar una clave distinta.
+      // El backend decide si corresponde a Admin o a un usuario normal.
       const auth = await api.post('/api/auth/login', { username, password: pass });
       if (auth?.tipo === 'admin') {
         localStorage.removeItem('riverospay_last_user');
@@ -82,7 +113,7 @@ function proceedAfterLogin() {
 }
 
 function mostrarCodigoRecuperacion(code) {
-  $('#recovery-content').innerHTML = `<h1>Guarda tu código de recuperación</h1><p class="muted" style="margin:0 0 18px;">Es la única forma de recuperar tu cuenta si olvidas la contraseña. No lo vamos a volver a mostrar.</p><div class="share-code">${code}</div><button class="btn-secondary" style="margin-top:14px;" onclick="copiarTexto('${code}')">Copiar código</button><label class="check-row" style="margin-top:18px;"><input type="checkbox" id="recovery-check">Ya guardé mi código de recuperación en un lugar seguro.</label><button class="btn-primary" id="recovery-continuar" disabled style="margin-top:14px;">Continuar</button>`;
+  $('#recovery-content').innerHTML = `<h1>Guarda tu código de recuperación</h1><p class="muted" style="margin:0 0 18px;">Es la única forma de recuperar tu cuenta si olvidas la clave. No lo vamos a volver a mostrar.</p><div class="share-code">${code}</div><button class="btn-secondary" style="margin-top:14px;" onclick="copiarTexto('${code}')">Copiar código</button><label class="check-row" style="margin-top:18px;"><input type="checkbox" id="recovery-check">Ya guardé mi código de recuperación en un lugar seguro.</label><button class="btn-primary" id="recovery-continuar" disabled style="margin-top:14px;">Continuar</button>`;
   $('#recovery-check').addEventListener('change', (e) => { $('#recovery-continuar').disabled = !e.target.checked; });
   $('#recovery-continuar').addEventListener('click', proceedAfterLogin); showScreen('screen-recovery');
 }
@@ -93,14 +124,15 @@ function copiarTexto(texto) {
 }
 
 function abrirRecuperarContrasena() {
-  openModal('Recuperar contraseña', `<label>Usuario<input id="f-rec-user" type="text" autocomplete="username"></label><label>Código de recuperación<input id="f-rec-code" type="text" placeholder="XXXX-XXXX-XXXX"></label><label>Nueva contraseña<input id="f-rec-pass" type="password" placeholder="6 a 12 caracteres" minlength="6" maxlength="12"></label><p class="field-error" id="f-rec-error"></p><button class="btn-primary" onclick="enviarRecuperacion()">Restablecer contraseña</button>`);
+  openModal('Recuperar contraseña', `<label>Usuario<input id="f-rec-user" type="text" autocomplete="username"></label><label>Código de recuperación<input id="f-rec-code" type="text" placeholder="XXXX-XXXX-XXXX"></label><label>Nueva clave<input id="f-rec-pass" type="password" placeholder="6 dígitos" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}"></label><p class="field-error" id="f-rec-error"></p><button class="btn-primary" onclick="enviarRecuperacion()">Restablecer clave</button>`);
+  configurarCamposClave6();
 }
 
 async function enviarRecuperacion() {
   const username = $('#f-rec-user').value.trim(), recoveryCode = $('#f-rec-code').value.trim(), newPassword = $('#f-rec-pass').value, err = $('#f-rec-error');
-  if (!/^[A-Za-z0-9]{6,12}$/.test(newPassword)) { err.textContent = 'La nueva contraseña debe tener de 6 a 12 caracteres (letras y números).'; return; }
+  if (!CLAVE_USUARIO_REGEX.test(newPassword)) { err.textContent = 'La nueva clave debe tener exactamente 6 dígitos.'; return; }
   try {
     await api.post('/api/auth/recuperar', { username, recoveryCode, newPassword });
-    closeModal(); toast('Contraseña actualizada. Ya puedes iniciar sesión.'); setAuthMode('login'); $('#log-user').value = username;
+    closeModal(); toast('Clave actualizada. Ya puedes iniciar sesión.'); setAuthMode('login'); $('#log-user').value = username;
   } catch (ex) { err.textContent = ex.message; }
 }
