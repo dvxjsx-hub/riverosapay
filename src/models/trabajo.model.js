@@ -25,6 +25,14 @@ function buscarLugarPorId(id) { return db.lugares.find(l => l.id === id); }
 function buscarTurnoPorId(id) { return db.turnos.find(t => t.id === id); }
 function crearTurno(turno) { db.turnos.push(turno); }
 
+function marcarFinalizado(id, fecha = new Date().toISOString()) {
+  const turno = buscarTurnoPorId(id);
+  if (!turno) return null;
+  turno.finalizado = true;
+  turno.finalizadoAt = fecha;
+  return turno;
+}
+
 function eliminarTurno(id) {
   const turno = db.turnos.find(t => t.id === id);
   db.turnos = db.turnos.filter(t => t.id !== id);
@@ -55,6 +63,6 @@ function empleadosConTrabajosAsignados(jefeId) {
 module.exports = {
   snapshot, broadcast,
   buscarOCrearLugar, buscarLugarPorId,
-  buscarTurnoPorId, crearTurno, eliminarTurno,
+  buscarTurnoPorId, crearTurno, marcarFinalizado, eliminarTurno,
   misJefes, tieneTrabajoAsignado, empleadosConTrabajosAsignados
 };
