@@ -19,6 +19,13 @@ function buscarMateria(id) {
   return db.materias.find(m => m.id === id);
 }
 
+function actualizarMateria(id, cambios) {
+  const materia = buscarMateria(id);
+  if (!materia) return null;
+  Object.assign(materia, cambios);
+  return materia;
+}
+
 function eliminarMateria(id) {
   db.materias = db.materias.filter(m => m.id !== id);
 }
@@ -40,6 +47,6 @@ function eliminarActividad(id) {
 }
 
 module.exports = {
-  broadcast, materiasDe, crearMateria, buscarMateria, eliminarMateria,
+  broadcast, materiasDe, crearMateria, buscarMateria, actualizarMateria, eliminarMateria,
   actividadesDe, buscarActividad, crearActividad, eliminarActividad
 };
