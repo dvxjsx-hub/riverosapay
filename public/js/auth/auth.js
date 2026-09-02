@@ -22,16 +22,8 @@ function setAuthMode(mode) {
   $('#auth-toggle').dataset.next = isLogin ? 'register' : 'login';
   $('#reg-error').textContent = '';
   $('#log-error').textContent = '';
-
-  // En Tanda 6 ya no existe el concepto de dispositivo guardado.
   const reset = $('#auth-reset'); if (reset) reset.remove();
-
-  // Texto exacto del nuevo acceso normal.
-  const regUser = $('#reg-user');
-  const regPass = $('#reg-pass');
-  const regPass2 = $('#reg-pass2');
-  const logUser = $('#log-user');
-  const logPass = $('#log-pass');
+  const regUser = $('#reg-user'), regPass = $('#reg-pass'), regPass2 = $('#reg-pass2'), logUser = $('#log-user'), logPass = $('#log-pass');
   if (regUser) regUser.placeholder = '';
   if (regPass) regPass.placeholder = '4 dígitos';
   if (regPass2) regPass2.placeholder = 'Repite la clave';
@@ -41,7 +33,6 @@ function setAuthMode(mode) {
   if (regLabels?.[2]) regLabels[2].childNodes[0].textContent = 'Confirmar clave';
   const logLabels = $('#form-login')?.querySelectorAll('label');
   if (logLabels?.[1]) logLabels[1].childNodes[0].textContent = 'Ingresa tu clave';
-
   const legacy = $('#auth-legacy');
   if (legacy) {
     const username = (logUser?.value || '').trim().toLowerCase();
@@ -94,7 +85,6 @@ function setupAuth() {
   prepararCampoClave($('#reg-pass2'));
   prepararCampoClave($('#log-pass'));
 
-  // Opción temporal únicamente para cuentas que todavía no han migrado.
   if (!$('#auth-legacy')) {
     const legacy = document.createElement('button');
     legacy.id = 'auth-legacy'; legacy.type = 'button'; legacy.className = 'link-btn ghost hidden';
@@ -110,7 +100,6 @@ function setupAuth() {
     if (legacy) legacy.classList.toggle('hidden', !username || localStorage.getItem('riverosapay_migrated_' + username) === '1');
   });
   $('#auth-olvide').addEventListener('click', (e) => { e.preventDefault(); abrirRecuperarContrasena(); });
-
   setAuthMode($('#form-login').classList.contains('hidden') ? 'register' : 'login');
 
   $('#form-register').addEventListener('submit', async (e) => {
@@ -208,7 +197,7 @@ function copiarTexto(texto) {
 
 function abrirRecuperarContrasena() {
   openModal('Recuperar acceso', `<label>Usuario<input id="f-rec-user" type="text" autocomplete="username"></label><label>Código de recuperación<input id="f-rec-code" type="text" placeholder="XXXX-XXXX-XXXX"></label><label>Nueva clave<input id="f-rec-pass" type="password" inputmode="numeric" placeholder="4 dígitos" minlength="4" maxlength="4"></label><p class="field-error" id="f-rec-error"></p><button class="btn-primary" onclick="enviarRecuperacion()">Restablecer clave</button>`);
-  prepararCampoUsuario($('#f-rec-user')); prepararCampoClave($('#f-rec-pass));
+  prepararCampoUsuario($('#f-rec-user')); prepararCampoClave($('#f-rec-pass'));
 }
 
 async function enviarRecuperacion() {
