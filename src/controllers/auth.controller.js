@@ -53,6 +53,34 @@ async function cambiarModo(req, res) {
   user.modoActual = modo; await save(); res.json(usuarios.publicUser(user));
 }
 
+async function cambiarClave(req, res) {
+  const { passwordActual, nuevaClave } = req.body || {};
+  const user = usuarios.buscarPorId(req.userId);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+  if (user.password !== hashPassword(passwordActual || '')) return res.status(401).json({ error: 'La clave actual es incorrecta.' });
+  if (!PASSWORD_REGEX.test(nuevaClave || '')) return res.status(400).json({ error: 'La nueva clave debe tener exactamente 6 dígitos.' });
+  if (nuevaClave === passwordActual) return res.status(400).json({ error: 'La nueva clave debe ser diferente a la actual.' });
+
+  user.password = hashPassword(nuevaClave);
+  const recoveryCode = newRecoveryCode();
+  user.recoveryCodeHash = hashRecoveryCode(recoveryCode);
+  await save();
+  res.json({ ...usuarios.publicUser(user), recoveryCode });
+}
+
+async function obtenerNuevoCodigoRecuperacion(req, res) {
+  const { username, password } = req.body || {};
+  const user = usuarios.buscarPorUsername(username);
+  if (!user || user.id !== req.userId || user.password !== hashPassword(password || '')) return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
+
+  // El código se almacena solo como hash; al solicitar verlo generamos uno nuevo
+  // y el anterior queda invalidado. Así nunca necesitamos guardar el secreto en claro.
+  const recoveryCode = newRecoveryCode();
+  user.recoveryCodeHash = hashRecoveryCode(recoveryCode);
+  await save();
+  res.json({ recoveryCode });
+}
+
 async function eliminarDatosCuenta(userId) {
   db.turnos = db.turnos.filter(t => t.empleadoId !== userId);
   db.lugares = db.lugares.filter(l => l.empleadoId !== userId);
@@ -100,4 +128,4 @@ async function elegirRol(req, res) {
   if (!user.codigoAmistad) user.codigoAmistad = newFriendCode(db); await save(); res.json(usuarios.publicUser(user));
 }
 
-module.exports = { registrar, recuperar, configurarNombre, preferencias, cambiarModo, eliminarCuenta, eliminarDatosCuenta, login, logout, elegirRol };
+module.exports = { registrar, recuperar, configurarNombre, preferencias, cambiarModo, cambiarClave, obtenerNuevoCodigoRecuperacion, eliminarCuenta, eliminarDatosCuenta, login, logout, elegirRol };
