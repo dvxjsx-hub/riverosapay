@@ -32,8 +32,10 @@ async function recuperar(req, res) {
   if (!PASSWORD_REGEX.test(newPassword || '')) return res.status(400).json({ error: 'La nueva clave debe tener exactamente 4 dígitos.' });
   user.password = hashPassword(newPassword);
   user.claveMigrada = true;
+  const recoveryCodeNuevo = newRecoveryCode();
+  user.recoveryCodeHash = hashRecoveryCode(recoveryCodeNuevo);
   destroyUserSessions(user.id);
-  await save(); res.json({ ok: true });
+  await save(); res.json({ ok: true, recoveryCode: recoveryCodeNuevo });
 }
 
 async function migrarCuenta(req, res) {
@@ -45,8 +47,10 @@ async function migrarCuenta(req, res) {
   if (newPassword !== confirmPassword) return res.status(400).json({ error: 'Las claves no coinciden.' });
   user.password = hashPassword(newPassword);
   user.claveMigrada = true;
+  const recoveryCodeNuevo = newRecoveryCode();
+  user.recoveryCodeHash = hashRecoveryCode(recoveryCodeNuevo);
   await save();
-  res.json(usuarios.publicUser(user));
+  res.json({ ...usuarios.publicUser(user), recoveryCode: recoveryCodeNuevo });
 }
 
 async function login(req, res) {
