@@ -14,25 +14,36 @@ function goToAuth() {
 
 function setAuthMode(mode) {
   const isLogin = mode === 'login';
-  $('#form-register').classList.toggle('hidden', isLogin);
-  $('#form-login').classList.toggle('hidden', !isLogin);
+  const register = $('#form-register');
+  const login = $('#form-login');
+  if (!register || !login) return;
+
+  register.classList.toggle('hidden', isLogin);
+  login.classList.toggle('hidden', !isLogin);
   $('#auth-title').textContent = isLogin ? 'Iniciar sesión' : 'Crear usuario';
   $('#auth-sub').textContent = '';
   $('#auth-toggle').textContent = isLogin ? 'Crear nueva cuenta' : '¿Ya tienes cuenta? Iniciar sesión';
   $('#auth-toggle').dataset.next = isLogin ? 'register' : 'login';
   $('#reg-error').textContent = '';
   $('#log-error').textContent = '';
+
+  // El acceso anterior ya no se ofrece como parte del flujo normal.
+  // setupAuth lo inserta únicamente como opción temporal para cuentas legacy.
   const reset = $('#auth-reset'); if (reset) reset.remove();
-  const regUser = $('#reg-user'), regPass = $('#reg-pass'), regPass2 = $('#reg-pass2'), logUser = $('#log-user'), logPass = $('#log-pass');
-  if (regUser) regUser.placeholder = '';
-  if (regPass) regPass.placeholder = '4 dígitos';
-  if (regPass2) regPass2.placeholder = 'Repite la clave';
-  if (logPass) logPass.placeholder = '';
-  const regLabels = $('#form-register')?.querySelectorAll('label');
-  if (regLabels?.[1]) regLabels[1].childNodes[0].textContent = 'Clave';
-  if (regLabels?.[2]) regLabels[2].childNodes[0].textContent = 'Confirmar clave';
-  const logLabels = $('#form-login')?.querySelectorAll('label');
-  if (logLabels?.[1]) logLabels[1].childNodes[0].textContent = 'Ingresa tu clave';
+
+  const regUser = $('#reg-user'), regPass = $('#reg-pass'), regPass2 = $('#reg-pass2');
+  const logUser = $('#log-user'), logPass = $('#log-pass');
+  if (regUser) { regUser.placeholder = ''; regUser.maxLength = 15; regUser.autocomplete = 'username'; }
+  if (regPass) { regPass.placeholder = '4 dígitos'; regPass.maxLength = 4; regPass.minLength = 4; }
+  if (regPass2) { regPass2.placeholder = 'Repite la clave'; regPass2.maxLength = 4; regPass2.minLength = 4; }
+  if (logPass) { logPass.placeholder = ''; logPass.maxLength = 4; logPass.minLength = 4; logPass.inputMode = 'numeric'; }
+
+  const regLabels = register.querySelectorAll('label');
+  if (regLabels[1]) regLabels[1].childNodes[0].textContent = 'Clave';
+  if (regLabels[2]) regLabels[2].childNodes[0].textContent = 'Confirmar clave';
+  const logLabels = login.querySelectorAll('label');
+  if (logLabels[1]) logLabels[1].childNodes[0].textContent = 'Ingresa tu clave';
+
   const legacy = $('#auth-legacy');
   if (legacy) {
     const username = (logUser?.value || '').trim().toLowerCase();
@@ -54,6 +65,7 @@ function cargarModuloAdmin() {
 function prepararCampoUsuario(campo) {
   if (!campo) return;
   campo.maxLength = 15;
+  campo.autocomplete = 'username';
   campo.addEventListener('input', () => {
     const limpio = campo.value.replace(/[^A-Za-z]/g, '');
     if (campo.value !== limpio) campo.value = limpio;
@@ -62,6 +74,7 @@ function prepararCampoUsuario(campo) {
 
 function prepararCampoClave(campo) {
   if (!campo) return;
+  campo.type = 'password';
   campo.inputMode = 'numeric';
   campo.maxLength = 4;
   campo.minLength = 4;
@@ -87,24 +100,34 @@ function setupAuth() {
 
   if (!$('#auth-legacy')) {
     const legacy = document.createElement('button');
-    legacy.id = 'auth-legacy'; legacy.type = 'button'; legacy.className = 'link-btn ghost hidden';
+    legacy.id = 'auth-legacy';
+    legacy.type = 'button';
+    legacy.className = 'link-btn ghost hidden';
     legacy.textContent = '¿USUARIO VIEJO?';
     $('#auth-toggle').insertAdjacentElement('afterend', legacy);
     legacy.addEventListener('click', () => abrirLoginUsuarioViejo());
   }
 
-  $('#auth-toggle').addEventListener('click', () => setAuthMode($('#auth-toggle').dataset.next));
+  $('#auth-toggle').addEventListener('click', () => {
+    const next = $('#auth-toggle').dataset.next || 'login';
+    setAuthMode(next);
+  });
+
   $('#log-user').addEventListener('input', () => {
     const username = $('#log-user').value.trim().toLowerCase();
     const legacy = $('#auth-legacy');
     if (legacy) legacy.classList.toggle('hidden', !username || localStorage.getItem('riverosapay_migrated_' + username) === '1');
   });
+
   $('#auth-olvide').addEventListener('click', (e) => { e.preventDefault(); abrirRecuperarContrasena(); });
   setAuthMode($('#form-login').classList.contains('hidden') ? 'register' : 'login');
 
   $('#form-register').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const username = $('#reg-user').value.trim().toLowerCase(), pass = $('#reg-pass').value, pass2 = $('#reg-pass2').value, err = $('#reg-error');
+    const username = $('#reg-user').value.trim().toLowerCase();
+    const pass = $('#reg-pass').value;
+    const pass2 = $('#reg-pass2').value;
+    const err = $('#reg-error');
     if (!/^[A-Za-z]{3,15}$/.test(username)) { err.textContent = 'El usuario debe tener de 3 a 15 letras, sin números ni símbolos.'; return; }
     if (!/^\d{4}$/.test(pass)) { err.textContent = 'La clave debe tener exactamente 4 dígitos.'; return; }
     if (pass !== pass2) { err.textContent = 'Las claves no coinciden.'; return; }
@@ -113,13 +136,18 @@ function setupAuth() {
       const user = await api.post('/api/auth/register', { username, password: pass });
       localStorage.setItem('riverospay_last_user', user.username);
       ocultarAccesoUsuarioViejo(user.username);
-      STATE.user = user; STATE.onboardingPending = true; setupSocket(); mostrarCodigoRecuperacion(user.recoveryCode);
-    } catch (ex) { err.textContent = ex.message; }
+      STATE.user = user;
+      STATE.onboardingPending = true;
+      setupSocket();
+      mostrarCodigoRecuperacion(user.recoveryCode);
+    } catch (ex) { err.textContent = ex.message || 'No se pudo crear la cuenta.'; }
   });
 
   $('#form-login').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const username = $('#log-user').value.trim().toLowerCase(), pass = $('#log-pass').value, err = $('#log-error');
+    const username = $('#log-user').value.trim().toLowerCase();
+    const pass = $('#log-pass').value;
+    const err = $('#log-error');
     try {
       const auth = await api.post('/api/auth/login', { username, password: pass });
       if (auth?.tipo === 'admin') {
@@ -131,7 +159,9 @@ function setupAuth() {
       localStorage.setItem('riverospay_last_user', auth.username);
       ocultarAccesoUsuarioViejo(auth.username);
       afterAuth(auth);
-    } catch (ex) { err.textContent = ex.message; }
+    } catch (ex) {
+      err.textContent = ex.message || 'Usuario o clave incorrectos.';
+    }
   });
 }
 
@@ -148,7 +178,9 @@ async function entrarUsuarioViejo() {
     const user = await api.post('/api/auth/login-legacy', { username, password });
     closeModal();
     localStorage.setItem('riverospay_last_user', user.username);
-    STATE.user = user; STATE.onboardingPending = false; setupSocket();
+    STATE.user = user;
+    STATE.onboardingPending = false;
+    setupSocket();
     mostrarMigracionClave(user.username);
   } catch (ex) { err.textContent = ex.message; }
 }
