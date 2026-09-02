@@ -70,3 +70,12 @@ function registerSocketRoom() {
     STATE.socket.emit('register-jefe', { jefeId: STATE.user.id });
   }
 }
+
+// Carga después de todos los scripts clásicos de la página para que el
+// complemento pueda extender Trabajo sin tocar el arranque de autenticación.
+setTimeout(() => {
+  const script = document.createElement('script');
+  script.src = '/js/trabajo/tanda5-ui.js';
+  script.async = true;
+  document.head.appendChild(script);
+}, 0);
