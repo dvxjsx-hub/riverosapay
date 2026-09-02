@@ -17,7 +17,7 @@ function setAuthMode(mode) {
   $('#form-register').classList.toggle('hidden', isLogin);
   $('#form-login').classList.toggle('hidden', !isLogin);
   $('#auth-title').textContent = isLogin ? 'Iniciar sesión' : 'Crear usuario';
-  $('#auth-sub').textContent = isLogin ? '' : '';
+  $('#auth-sub').textContent = '';
   $('#auth-toggle').textContent = isLogin ? 'Crear nueva cuenta' : '¿Ya tienes cuenta? Iniciar sesión';
   $('#auth-toggle').dataset.next = isLogin ? 'register' : 'login';
   $('#reg-error').textContent = '';
@@ -74,7 +74,7 @@ function setupAuth() {
   // Opción temporal únicamente para cuentas que todavía no han migrado.
   if (!$('#auth-legacy')) {
     const legacy = document.createElement('button');
-    legacy.id = 'auth-legacy'; legacy.type = 'button'; legacy.className = 'link-btn ghost';
+    legacy.id = 'auth-legacy'; legacy.type = 'button'; legacy.className = 'link-btn ghost hidden';
     legacy.textContent = '¿USUARIO VIEJO?';
     $('#auth-toggle').insertAdjacentElement('afterend', legacy);
     legacy.addEventListener('click', () => abrirLoginUsuarioViejo());
@@ -87,6 +87,9 @@ function setupAuth() {
     if (legacy) legacy.classList.toggle('hidden', !username || localStorage.getItem('riverosapay_migrated_' + username) === '1');
   });
   $('#auth-olvide').addEventListener('click', (e) => { e.preventDefault(); abrirRecuperarContrasena(); });
+
+  // Sincroniza el estado inicial después de crear dinámicamente la opción legacy.
+  setAuthMode($('#form-login').classList.contains('hidden') ? 'register' : 'login');
 
   $('#form-register').addEventListener('submit', async (e) => {
     e.preventDefault();
