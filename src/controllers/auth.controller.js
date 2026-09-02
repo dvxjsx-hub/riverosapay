@@ -9,7 +9,7 @@ async function registrar(req, res) {
   const adminId = (process.env.ADMIN_ID || '').trim().toLowerCase();
   if (!USERNAME_REGEX.test(uname)) return res.status(400).json({ error: 'El usuario debe tener entre 5 y 10 letras minúsculas, sin números ni símbolos.' });
   if (adminId && uname.toLowerCase() === adminId) return res.status(409).json({ error: 'Ese usuario está reservado.' });
-  if (!PASSWORD_REGEX.test(password || '')) return res.status(400).json({ error: 'La contraseña debe tener entre 6 y 12 caracteres (letras y números).' });
+  if (!PASSWORD_REGEX.test(password || '')) return res.status(400).json({ error: 'La clave debe tener exactamente 6 dígitos.' });
   if (usuarios.existeUsername(uname)) return res.status(409).json({ error: 'Ese usuario ya existe.' });
 
   const recoveryCode = newRecoveryCode();
@@ -24,7 +24,7 @@ async function recuperar(req, res) {
   const { username, recoveryCode, newPassword } = req.body || {};
   const user = usuarios.buscarPorUsername(username);
   if (!user || !user.recoveryCodeHash || hashRecoveryCode((recoveryCode || '').trim()) !== user.recoveryCodeHash) return res.status(401).json({ error: 'Usuario o código de recuperación incorrectos.' });
-  if (!PASSWORD_REGEX.test(newPassword || '')) return res.status(400).json({ error: 'La nueva contraseña debe tener entre 6 y 12 caracteres (letras y números).' });
+  if (!PASSWORD_REGEX.test(newPassword || '')) return res.status(400).json({ error: 'La nueva clave debe tener exactamente 6 dígitos.' });
   user.password = hashPassword(newPassword);
   destroyUserSessions(user.id);
   await save(); res.json({ ok: true });
@@ -78,8 +78,9 @@ async function login(req, res) {
   const { username, password } = req.body || {}; const uname = (username || '').trim().toLowerCase();
   const adminId = (process.env.ADMIN_ID || '').trim().toLowerCase(); const adminPassword = process.env.ADMIN_PASSWORD || '';
   if (adminId && adminPassword && uname === adminId && password === adminPassword) { setSessionCookie(res, createSession({ type: 'admin' })); return res.json({ tipo: 'admin' }); }
+  if (!PASSWORD_REGEX.test(password || '')) return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
   const user = usuarios.buscarPorUsername(uname);
-  if (!user || user.password !== hashPassword(password || '')) return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
+  if (!user || user.password !== hashPassword(password || '')) return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
   user.lastLoginAt = new Date().toISOString(); await save();
   setSessionCookie(res, createSession({ type: 'user', userId: user.id })); res.json(usuarios.publicUser(user));
 }
