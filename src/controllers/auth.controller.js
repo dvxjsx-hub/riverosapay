@@ -1,20 +1,25 @@
 const { db, save } = require('../config/db');
 const usuarios = require('../models/usuarios.model');
-const { hashPassword, newId, newShareCode, newFriendCode, USERNAME_REGEX, PASSWORD_REGEX, hashRecoveryCode, newRecoveryCode } = require('../utils/utils');
+const { hashPassword, newId, newShareCode, newFriendCode, USERNAME_REGEX, PASSWORD_REGEX, LEGACY_USERNAME_REGEX, LEGACY_PASSWORD_REGEX, hashRecoveryCode, newRecoveryCode } = require('../utils/utils');
 const { COOKIE_NAME, createSession, setSessionCookie, clearSessionCookie, readSession, destroySession, destroyUserSessions } = require('../middleware/session');
 
 async function registrar(req, res) {
   const { username, password } = req.body || {};
-  const uname = (username || '').trim();
+  const uname = (username || '').trim().toLowerCase();
   const adminId = (process.env.ADMIN_ID || '').trim().toLowerCase();
-  if (!USERNAME_REGEX.test(uname)) return res.status(400).json({ error: 'El usuario debe tener entre 5 y 10 letras minúsculas, sin números ni símbolos.' });
-  if (adminId && uname.toLowerCase() === adminId) return res.status(409).json({ error: 'Ese usuario está reservado.' });
-  if (!PASSWORD_REGEX.test(password || '')) return res.status(400).json({ error: 'La contraseña debe tener entre 6 y 12 caracteres (letras y números).' });
+  if (!USERNAME_REGEX.test(uname)) return res.status(400).json({ error: 'El usuario debe tener entre 3 y 15 letras, sin números ni símbolos.' });
+  if (adminId && uname === adminId) return res.status(409).json({ error: 'Ese usuario está reservado.' });
+  if (!PASSWORD_REGEX.test(password || '')) return res.status(400).json({ error: 'La clave debe tener exactamente 4 dígitos.' });
   if (usuarios.existeUsername(uname)) return res.status(409).json({ error: 'Ese usuario ya existe.' });
 
   const recoveryCode = newRecoveryCode();
   const now = new Date().toISOString();
-  const user = { id: newId('u'), username: uname, password: hashPassword(password), role: 'empleado', shareCode: newShareCode(db), modoActual: 'empleado', codigoAmistad: newFriendCode(db), nombreCompleto: null, recoveryCodeHash: hashRecoveryCode(recoveryCode), createdAt: now, lastLoginAt: now };
+  const user = {
+    id: newId('u'), username: uname, password: hashPassword(password), role: 'empleado',
+    shareCode: newShareCode(db), modoActual: 'empleado', codigoAmistad: newFriendCode(db),
+    nombreCompleto: null, recoveryCodeHash: hashRecoveryCode(recoveryCode), createdAt: now,
+    lastLoginAt: now, claveMigrada: true
+  };
   usuarios.crear(user); await save();
   setSessionCookie(res, createSession({ type: 'user', userId: user.id }));
   res.json({ ...usuarios.publicUser(user), recoveryCode });
@@ -24,10 +29,47 @@ async function recuperar(req, res) {
   const { username, recoveryCode, newPassword } = req.body || {};
   const user = usuarios.buscarPorUsername(username);
   if (!user || !user.recoveryCodeHash || hashRecoveryCode((recoveryCode || '').trim()) !== user.recoveryCodeHash) return res.status(401).json({ error: 'Usuario o código de recuperación incorrectos.' });
-  if (!PASSWORD_REGEX.test(newPassword || '')) return res.status(400).json({ error: 'La nueva contraseña debe tener entre 6 y 12 caracteres (letras y números).' });
+  if (!PASSWORD_REGEX.test(newPassword || '')) return res.status(400).json({ error: 'La nueva clave debe tener exactamente 4 dígitos.' });
   user.password = hashPassword(newPassword);
+  user.claveMigrada = true;
   destroyUserSessions(user.id);
   await save(); res.json({ ok: true });
+}
+
+async function migrarCuenta(req, res) {
+  const user = usuarios.buscarPorId(req.userId);
+  const { newPassword, confirmPassword } = req.body || {};
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+  if (user.claveMigrada === true) return res.status(409).json({ error: 'Esta cuenta ya utiliza la nueva clave.' });
+  if (!PASSWORD_REGEX.test(newPassword || '')) return res.status(400).json({ error: 'La nueva clave debe tener exactamente 4 dígitos.' });
+  if (newPassword !== confirmPassword) return res.status(400).json({ error: 'Las claves no coinciden.' });
+  user.password = hashPassword(newPassword);
+  user.claveMigrada = true;
+  await save();
+  res.json(usuarios.publicUser(user));
+}
+
+async function login(req, res) {
+  const { username, password } = req.body || {};
+  const uname = (username || '').trim().toLowerCase();
+  const adminId = (process.env.ADMIN_ID || '').trim().toLowerCase(); const adminPassword = process.env.ADMIN_PASSWORD || '';
+  if (adminId && adminPassword && uname === adminId && password === adminPassword) { setSessionCookie(res, createSession({ type: 'admin' })); return res.json({ tipo: 'admin' }); }
+  if (!USERNAME_REGEX.test(uname) || !PASSWORD_REGEX.test(password || '')) return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
+  const user = usuarios.buscarPorUsername(uname);
+  if (!user || user.claveMigrada !== true || user.password !== hashPassword(password || '')) return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
+  user.lastLoginAt = new Date().toISOString(); await save();
+  setSessionCookie(res, createSession({ type: 'user', userId: user.id })); res.json(usuarios.publicUser(user));
+}
+
+async function loginLegacy(req, res) {
+  const { username, password } = req.body || {};
+  const uname = (username || '').trim().toLowerCase();
+  if (!LEGACY_USERNAME_REGEX.test(uname) || !LEGACY_PASSWORD_REGEX.test(password || '')) return res.status(401).json({ error: 'Usuario o contraseña anteriores incorrectos.' });
+  const user = usuarios.buscarPorUsername(uname);
+  if (!user || user.claveMigrada === true || user.password !== hashPassword(password || '')) return res.status(401).json({ error: 'Usuario o contraseña anteriores incorrectos.' });
+  user.lastLoginAt = new Date().toISOString(); await save();
+  setSessionCookie(res, createSession({ type: 'user', userId: user.id }));
+  res.json({ ...usuarios.publicUser(user), requiereMigracion: true });
 }
 
 async function configurarNombre(req, res) {
@@ -74,16 +116,6 @@ async function eliminarCuenta(req, res) {
   clearSessionCookie(res); res.json({ ok: true });
 }
 
-async function login(req, res) {
-  const { username, password } = req.body || {}; const uname = (username || '').trim().toLowerCase();
-  const adminId = (process.env.ADMIN_ID || '').trim().toLowerCase(); const adminPassword = process.env.ADMIN_PASSWORD || '';
-  if (adminId && adminPassword && uname === adminId && password === adminPassword) { setSessionCookie(res, createSession({ type: 'admin' })); return res.json({ tipo: 'admin' }); }
-  const user = usuarios.buscarPorUsername(uname);
-  if (!user || user.password !== hashPassword(password || '')) return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
-  user.lastLoginAt = new Date().toISOString(); await save();
-  setSessionCookie(res, createSession({ type: 'user', userId: user.id })); res.json(usuarios.publicUser(user));
-}
-
 async function logout(req, res) {
   const match = (req.headers.cookie || '').match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]+)`));
   if (match) destroySession(decodeURIComponent(match[1]));
@@ -99,4 +131,4 @@ async function elegirRol(req, res) {
   if (!user.codigoAmistad) user.codigoAmistad = newFriendCode(db); await save(); res.json(usuarios.publicUser(user));
 }
 
-module.exports = { registrar, recuperar, configurarNombre, preferencias, cambiarModo, eliminarCuenta, eliminarDatosCuenta, login, logout, elegirRol };
+module.exports = { registrar, recuperar, migrarCuenta, login, loginLegacy, configurarNombre, preferencias, cambiarModo, eliminarCuenta, eliminarDatosCuenta, logout, elegirRol };
