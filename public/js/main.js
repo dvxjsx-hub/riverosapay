@@ -16,157 +16,69 @@ function cargarModuloAmistades() {
 function prepararDrawerAmistades() {
   const drawer = $('#drawer');
   if (!drawer) return;
-
-  // Compartir/Verificar son parte del sistema anterior y ya no se muestran.
   $('#drawer-compartir')?.classList.add('hidden');
   $('#drawer-verificar')?.classList.add('hidden');
-
   let item = $('#drawer-amistades');
   if (!item) {
-    item = document.createElement('button');
-    item.className = 'drawer-item';
-    item.id = 'drawer-amistades';
-    item.innerHTML = `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.8 19c.7-3.2 2.5-4.8 5.2-4.8s4.5 1.6 5.2 4.8"/><path d="M14.5 14.8c2.8.1 4.7 1.4 5.3 4.2"/>
-      </svg>
-      Amistades
-    `;
-    const referencia = $('#drawer-notificaciones') || $('#drawer-informacion');
-    drawer.insertBefore(item, referencia);
+    item = document.createElement('button'); item.className = 'drawer-item'; item.id = 'drawer-amistades';
+    item.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.8 19c.7-3.2 2.5-4.8 5.2-4.8s4.5 1.6 5.2 4.8"/><path d="M14.5 14.8c2.8.1 4.7 1.4 5.3 4.2"/></svg>Amistades`;
+    const referencia = $('#drawer-notificaciones') || $('#drawer-informacion'); drawer.insertBefore(item, referencia);
   }
 }
 
 function setupDrawer() {
   prepararDrawerAmistades();
-
   $('#btn-menu').addEventListener('click', openDrawer);
   $('#drawer-overlay').addEventListener('click', closeDrawer);
-
   $('#drawer-inicio').addEventListener('click', () => {
     closeDrawer();
     if (modoActualUsuario() === 'empleado') {
-      $all('.tab').forEach(b => b.classList.remove('active'));
-      STATE.activeTab = null;
-      renderHome();
-    } else {
-      STATE.viewMode = 'jefe-historial';
-      STATE.jefeView = null;
-      renderHistorial();
-    }
+      $all('.tab').forEach(b => b.classList.remove('active')); STATE.activeTab = null; renderHome();
+    } else { STATE.viewMode = 'jefe-historial'; STATE.jefeView = null; renderHistorial(); }
   });
-
-  $('#drawer-amistades').addEventListener('click', () => {
-    closeDrawer();
-    openAmistades();
-  });
-
-  // Compartir y Verificar pertenecen al flujo antiguo y quedan fuera del menú.
-  $('#drawer-compartir').classList.add('hidden');
-  $('#drawer-verificar').classList.add('hidden');
+  $('#drawer-amistades').addEventListener('click', () => { closeDrawer(); openAmistades(); });
+  $('#drawer-compartir').classList.add('hidden'); $('#drawer-verificar').classList.add('hidden');
   $('#drawer-notificaciones').addEventListener('click', () => { closeDrawer(); openNotificaciones(); });
   $('#drawer-informacion').addEventListener('click', () => { closeDrawer(); openInformacion(); });
-
   $('#drawer-logout').addEventListener('click', () => {
     closeDrawer();
-    if (STATE.socket) {
-      STATE.socket.disconnect();
-      STATE.socket = null;
-    }
-
-    STATE.user = null;
-    STATE.viewMode = 'empleado';
-    STATE.activeTab = null;
-    STATE.trabajo = { lugares: [], turnos: [] };
-    STATE.estudio = [];
-    STATE.actividades = [];
-    STATE.eventos = [];
-    STATE.historial = [];
-    STATE.amistades = [];
-    STATE.notificaciones = [];
-    STATE.jefeView = null;
-    STATE.pendingRequest = null;
-    STATE.onboardingPending = false;
-
-    showScreen('screen-auth');
-    setAuthMode('login');
-    const lastUser = localStorage.getItem('riverospay_last_user');
-    if (lastUser) $('#log-user').value = lastUser;
-    $('#log-pass').value = '';
-    setTimeout(() => $('#log-user')?.focus({ preventScroll: true }), 80);
+    if (STATE.socket) { STATE.socket.disconnect(); STATE.socket = null; }
+    STATE.user = null; STATE.viewMode = 'empleado'; STATE.activeTab = null;
+    STATE.trabajo = { lugares: [], turnos: [] }; STATE.estudio = []; STATE.actividades = [];
+    STATE.eventos = []; STATE.historial = []; STATE.amistades = []; STATE.notificaciones = [];
+    STATE.jefeView = null; STATE.pendingRequest = null; STATE.onboardingPending = false;
+    showScreen('screen-auth'); setAuthMode('login');
+    const lastUser = localStorage.getItem('riverospay_last_user'); if (lastUser) $('#log-user').value = lastUser;
+    $('#log-pass').value = ''; setTimeout(() => $('#log-user')?.focus({ preventScroll: true }), 80);
   });
 }
 
-function setupPerfil() {
-  $('#btn-perfil').addEventListener('click', openPerfil);
-}
+function setupPerfil() { $('#btn-perfil').addEventListener('click', openPerfil); }
+function setupModal() { $('#modal-close').addEventListener('click', closeModal); $('#modal-overlay').addEventListener('click', closeModal); }
 
-function setupModal() {
-  $('#modal-close').addEventListener('click', closeModal);
-  $('#modal-overlay').addEventListener('click', closeModal);
-}
-
-// En la vista de un BOSS, él mismo no necesita estar en su propia lista de
-// amistades para aparecer como el BOSS asignado de un trabajo.
 function nombreJefePorId(id) {
   if (!id) return null;
-  if (STATE.viewMode === 'jefe-ver' && STATE.user && id === STATE.user.id) {
-    return STATE.user.nombreCompleto || STATE.user.username;
-  }
-  const amigos = STATE.amistades || [];
-  const a = amigos.find(x => x.id === id);
-  return a ? (a.nombreCompleto || a.username) : null;
+  if (STATE.viewMode === 'jefe-ver' && STATE.user && id === STATE.user.id) return STATE.user.nombreCompleto || STATE.user.username;
+  const a = (STATE.amistades || []).find(x => x.id === id); return a ? (a.nombreCompleto || a.username) : null;
 }
 
-/* ============================================================
-   TANDA 5 — ajustes de interfaz y seguridad de Trabajo.
-   Se mantienen las funciones originales y se envuelven aquí para
-   no duplicar la lógica de Trabajo.
-   ============================================================ */
-
 function normalizarTextoBossEnModal(pares) {
-  const title = $('#modal-title');
-  if (title) {
-    const original = title.textContent.trim();
-    const reemplazo = pares[original];
-    if (reemplazo) title.textContent = reemplazo;
-  }
-  const body = $('#modal-body');
-  if (!body) return;
-  const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
-  const nodos = [];
-  let node;
+  const title = $('#modal-title'); if (title) { const original = title.textContent.trim(); const reemplazo = pares[original]; if (reemplazo) title.textContent = reemplazo; }
+  const body = $('#modal-body'); if (!body) return;
+  const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT); const nodos = []; let node;
   while ((node = walker.nextNode())) nodos.push(node);
-  nodos.forEach(n => {
-    const t = n.nodeValue.trim();
-    const reemplazo = pares[t];
-    if (reemplazo) n.nodeValue = n.nodeValue.replace(t, reemplazo);
-  });
+  nodos.forEach(n => { const t = n.nodeValue.trim(); const reemplazo = pares[t]; if (reemplazo) n.nodeValue = n.nodeValue.replace(t, reemplazo); });
 }
 
 function aplicarEstiloSelectorTrabajo() {
-  const selector = document.querySelector('.trabajo-vista-selector');
-  if (!selector) return;
-  selector.style.background = 'rgba(21,92,49,.08)';
-  selector.style.color = 'var(--green-900)';
-  selector.style.border = '1.5px solid var(--line)';
+  const selector = document.querySelector('.trabajo-vista-selector'); if (!selector) return;
+  selector.style.background = 'rgba(21,92,49,.08)'; selector.style.color = 'var(--green-900)'; selector.style.border = '1.5px solid var(--line)';
 }
 
 const _renderTrabajoT5 = typeof renderTrabajo === 'function' ? renderTrabajo : null;
-if (_renderTrabajoT5) {
-  renderTrabajo = function() {
-    _renderTrabajoT5();
-    aplicarEstiloSelectorTrabajo();
-  };
-}
-
+if (_renderTrabajoT5) renderTrabajo = function() { _renderTrabajoT5(); aplicarEstiloSelectorTrabajo(); };
 const _renderJefeViewT5 = typeof renderJefeView === 'function' ? renderJefeView : null;
-if (_renderJefeViewT5) {
-  renderJefeView = function() {
-    _renderJefeViewT5();
-    aplicarEstiloSelectorTrabajo();
-  };
-}
+if (_renderJefeViewT5) renderJefeView = function() { _renderJefeViewT5(); aplicarEstiloSelectorTrabajo(); };
 
 function abrirSelectorTrabajo() {
   const actual = trabajoVistaActual === TRABAJO_VISTAS.HORARIOS ? 'Horarios' : 'Finalizados';
@@ -175,107 +87,28 @@ function abrirSelectorTrabajo() {
 }
 
 const _abrirAccionesTrabajoT5 = typeof abrirAccionesTrabajo === 'function' ? abrirAccionesTrabajo : null;
-if (_abrirAccionesTrabajoT5) {
-  abrirAccionesTrabajo = function() {
-    _abrirAccionesTrabajoT5();
-    const botones = document.querySelectorAll('#modal-body button');
-    botones.forEach(btn => {
-      if (btn.textContent.trim() === 'Filtrar por jefe') btn.textContent = 'Filtrar por BOSS';
-    });
-  };
-}
-
+if (_abrirAccionesTrabajoT5) abrirAccionesTrabajo = function() { _abrirAccionesTrabajoT5(); document.querySelectorAll('#modal-body button').forEach(btn => { if (btn.textContent.trim() === 'Filtrar por jefe') btn.textContent = 'Filtrar por BOSS'; }); };
 const _abrirFiltroJefeT5 = typeof abrirFiltroJefe === 'function' ? abrirFiltroJefe : null;
-if (_abrirFiltroJefeT5) {
-  abrirFiltroJefe = async function(...args) {
-    await _abrirFiltroJefeT5(...args);
-    normalizarTextoBossEnModal({
-      'Filtrar por jefe': 'Filtrar por BOSS',
-      'Selecciona un jefe': 'Selecciona un BOSS',
-      'Todos los jefes': 'Todos los BOSS',
-      'No hay jefes registrados en tus trabajos.': 'No hay BOSS registrados en tus trabajos.'
-    });
-  };
-}
-
+if (_abrirFiltroJefeT5) abrirFiltroJefe = async function(...args) { await _abrirFiltroJefeT5(...args); normalizarTextoBossEnModal({'Filtrar por jefe':'Filtrar por BOSS','Selecciona un jefe':'Selecciona un BOSS','Todos los jefes':'Todos los BOSS','No hay jefes registrados en tus trabajos.':'No hay BOSS registrados en tus trabajos.'}); };
 const _openAddTrabajoT5 = typeof openAddTrabajo === 'function' ? openAddTrabajo : null;
-if (_openAddTrabajoT5) {
-  openAddTrabajo = async function(...args) {
-    await _openAddTrabajoT5(...args);
-    normalizarTextoBossEnModal({
-      'Jefe (amistad)': 'BOSS (amistad)',
-      'El jefe se selecciona únicamente entre tus amistades.': 'El BOSS se selecciona únicamente entre tus amistades.'
-    });
-  };
-}
-
+if (_openAddTrabajoT5) openAddTrabajo = async function(...args) { await _openAddTrabajoT5(...args); normalizarTextoBossEnModal({'Jefe (amistad)':'BOSS (amistad)','El jefe se selecciona únicamente entre tus amistades.':'El BOSS se selecciona únicamente entre tus amistades.'}); };
 const _openTurnoDetailT5 = typeof openTurnoDetail === 'function' ? openTurnoDetail : null;
-if (_openTurnoDetailT5) {
-  openTurnoDetail = function(...args) {
-    _openTurnoDetailT5(...args);
-    normalizarTextoBossEnModal({
-      'Jefe': 'BOSS',
-      'Sin jefe': 'Sin BOSS'
-    });
-  };
-}
-
+if (_openTurnoDetailT5) openTurnoDetail = function(...args) { _openTurnoDetailT5(...args); normalizarTextoBossEnModal({'Jefe':'BOSS','Sin jefe':'Sin BOSS'}); };
 const _abrirCambiarJefeT5 = typeof abrirCambiarJefe === 'function' ? abrirCambiarJefe : null;
-if (_abrirCambiarJefeT5) {
-  abrirCambiarJefe = async function(...args) {
-    await _abrirCambiarJefeT5(...args);
-    normalizarTextoBossEnModal({
-      'Cambiar jefe asignado': 'Cambiar BOSS asignado',
-      'Jefe': 'BOSS'
-    });
-  };
-}
-
-// Las acciones de pago y valor solo pueden ejecutarse desde el BOSS asignado.
+if (_abrirCambiarJefeT5) abrirCambiarJefe = async function(...args) { await _abrirCambiarJefeT5(...args); normalizarTextoBossEnModal({'Cambiar jefe asignado':'Cambiar BOSS asignado','Jefe':'BOSS'}); };
 const _setPagadoT5 = typeof setPagado === 'function' ? setPagado : null;
-if (_setPagadoT5) {
-  setPagado = async function(turnoId, pagado) {
-    try {
-      await api.patch(`/api/trabajo/turnos/${turnoId}`, {
-        pagado,
-        actorJefeId: STATE.user.id,
-        actorJefeUsername: STATE.user.username
-      });
-      toast(pagado ? 'Marcado como pagado' : 'Marcado como no pagado');
-      await refrescarJefeTrabajo();
-      openTurnoDetail(turnoId);
-    } catch (ex) { toast(ex.message); }
-  };
-}
-
+if (_setPagadoT5) setPagado = async function(turnoId, pagado) { try { await api.patch(`/api/trabajo/turnos/${turnoId}`, {pagado, actorJefeId:STATE.user.id, actorJefeUsername:STATE.user.username}); toast(pagado?'Marcado como pagado':'Marcado como no pagado'); await refrescarJefeTrabajo(); openTurnoDetail(turnoId); } catch(ex) { toast(ex.message); } };
 const _guardarValorT5 = typeof guardarValor === 'function' ? guardarValor : null;
-if (_guardarValorT5) {
-  guardarValor = async function(turnoId) {
-    const raw = $('#f-valor')?.value;
-    try {
-      await api.patch(`/api/trabajo/turnos/${turnoId}`, {
-        valor: raw === '' ? null : Number(raw),
-        actorJefeId: STATE.user.id,
-        actorJefeUsername: STATE.user.username
-      });
-      toast('Valor guardado');
-      await refrescarJefeTrabajo();
-      openTurnoDetail(turnoId);
-    } catch (ex) { toast(ex.message); }
-  };
-}
+if (_guardarValorT5) guardarValor = async function(turnoId) { const raw = $('#f-valor')?.value; try { await api.patch(`/api/trabajo/turnos/${turnoId}`, {valor:raw===''?null:Number(raw), actorJefeId:STATE.user.id, actorJefeUsername:STATE.user.username}); toast('Valor guardado'); await refrescarJefeTrabajo(); openTurnoDetail(turnoId); } catch(ex) { toast(ex.message); } };
 
 document.addEventListener('DOMContentLoaded', async () => {
-  setupAuth();
-  try {
-    await cargarModuloAmistades();
-  } catch (ex) {
-    console.error(ex);
-  }
-  setupDrawer();
-  setupPerfil();
-  setupTabs();
-  setupModal();
-  setupRequestCard();
-  initSplash();
+  // El splash no debe depender de módulos secundarios. Primero dejamos disponible la autenticación.
+  try { initSplash(); } catch (ex) { console.error('[riverosapay] Error iniciando splash:', ex); showScreen('screen-auth'); }
+  try { setupAuth(); } catch (ex) { console.error('[riverosapay] Error en autenticación:', ex); }
+  try { await cargarModuloAmistades(); } catch (ex) { console.error(ex); }
+  try { setupDrawer(); } catch (ex) { console.error('[riverosapay] Error en drawer:', ex); }
+  try { setupPerfil(); } catch (ex) { console.error('[riverosapay] Error en perfil:', ex); }
+  try { setupTabs(); } catch (ex) { console.error('[riverosapay] Error en tabs:', ex); }
+  try { setupModal(); } catch (ex) { console.error('[riverosapay] Error en modal:', ex); }
+  try { if (typeof setupRequestCard === 'function') setupRequestCard(); } catch (ex) { console.error('[riverosapay] Error en solicitudes:', ex); }
 });
