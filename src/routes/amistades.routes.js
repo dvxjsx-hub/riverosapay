@@ -4,11 +4,11 @@ const ah = require('../middleware/asyncHandler');
 const { requireUser } = require('../middleware/session');
 
 const router = express.Router();
-
-// Defensa en profundidad: las amistades solo son accesibles con sesión de usuario.
 router.use(requireUser);
 
 router.get('/:userId', ah(amistades.listar));
 router.post('/agregar', ah(amistades.agregar));
+router.post('/solicitudes/:solicitudId/responder', ah(amistades.responder));
+router.post('/eliminar', ah(amistades.eliminar));
 
 module.exports = router;
