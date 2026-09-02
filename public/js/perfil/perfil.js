@@ -1,5 +1,6 @@
 /* ============================================================
-   Riverospay · PERFIL Y ONBOARDING: nombre, modo, estudiante, notificaciones, eliminar cuenta
+   Riverospay · PERFIL Y CONFIGURACIÓN: nombre, modo, estudiante,
+   recuperación y gestión de cuenta
    ============================================================ */
 
 function mostrarConfigurarNombre() {
@@ -74,8 +75,7 @@ function openPerfil() {
       <button type="button" class="chip" style="border:0;cursor:pointer;font:inherit;" onclick="abrirSelectorModo()">${modoTexto}</button>
     </div>
     <div class="detail-row"><span>ID</span><span>${escapeHtml(STATE.user.username)}</span></div>
-    ${!STATE.user.nombreCompleto ? `<button class="btn-secondary" onclick="renderNombreFormulario('perfil')">Configurar nombre</button>` : ''}
-    <button class="btn-ghost-danger" style="width:100%;margin-top:10px;" onclick="pedirConfirmacionEliminarCuenta()">Eliminar cuenta</button>
+    <button class="btn-secondary" style="width:100%;margin-top:10px;" onclick="openConfiguracion()">Configuración</button>
   `);
 }
 
@@ -108,16 +108,118 @@ async function cambiarModoCuenta(modo) {
   }
 }
 
+function openConfiguracion() {
+  const esEmpleado = modoActualUsuario() === 'empleado';
+  const estudianteTexto = STATE.user.esEstudiante === true ? 'Estudio activado' : 'Estudio desactivado';
+  const nombre = STATE.user.nombreCompleto || 'No configurado';
+
+  openModal('Configuración', `
+    <div style="display:grid;gap:10px;">
+      <div class="detail-row"><span>Usuario</span><span>${escapeHtml(STATE.user.username)}</span></div>
+      <div class="detail-row"><span>Nombre</span><span>${escapeHtml(nombre)}</span></div>
+      <button class="btn-secondary" style="width:100%;" onclick="renderNombreFormulario('perfil')">${STATE.user.nombreCompleto ? 'Cambiar nombre' : 'Configurar nombre'}</button>
+
+      ${esEmpleado ? `
+        <button class="btn-secondary" style="width:100%;" onclick="abrirSesionAcademica()">${estudianteTexto}</button>
+      ` : `
+        <div class="notice-box" style="margin:0;">La <b>Sesión académica</b> se configura desde MODO EMPLEADO.</div>
+      `}
+
+      <button class="btn-secondary" style="width:100%;" onclick="abrirCambiarClave()">Cambiar clave</button>
+      <button class="btn-secondary" style="width:100%;" onclick="abrirCodigoRecuperacion()">Código de recuperación</button>
+      <button class="btn-secondary" style="width:100%;" onclick="openInformacion()">Información de Riverosapay</button>
+      <button class="btn-ghost-danger" style="width:100%;margin-top:4px;" onclick="pedirConfirmacionEliminarCuenta()">Eliminar cuenta</button>
+    </div>
+  `);
+}
+
+function abrirSesionAcademica() {
+  const activo = STATE.user.esEstudiante === true;
+  openModal('Sesión académica', `
+    <p class="muted" style="margin:0 0 18px;text-align:center;">${activo ? 'Estudio está activo.' : 'Estudio está desactivado.'}</p>
+    <button class="btn-primary" style="width:100%;" onclick="guardarPreferenciaEstudiante(${!activo})">${activo ? 'Desactivar Estudio' : 'Activar Estudio'}</button>
+    <button class="link-btn" style="width:100%;margin-top:8px;" onclick="openConfiguracion()">Cancelar</button>
+  `);
+}
+
+async function guardarPreferenciaEstudiante(valor) {
+  try {
+    const user = await api.post('/api/auth/preferencias', { userId: STATE.user.id, esEstudiante: valor });
+    STATE.user = user;
+    closeModal();
+    enterApp();
+    toast(valor ? 'Sesión académica activada' : 'Sesión académica desactivada');
+  } catch (ex) { toast(ex.message || 'No se pudo actualizar la sesión académica.'); }
+}
+
+function abrirCambiarClave() {
+  openModal('Cambiar clave', `
+    <p class="muted" style="margin:0 0 16px;">Tu clave normal debe tener exactamente 6 dígitos.</p>
+    <label>Clave actual<input id="f-clave-actual" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password"></label>
+    <label>Nueva clave<input id="f-clave-nueva" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password"></label>
+    <label>Confirmar nueva clave<input id="f-clave-nueva2" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password"></label>
+    <p class="field-error" id="f-clave-error"></p>
+    <button class="btn-primary" style="width:100%;" onclick="guardarCambioClave()">Cambiar clave</button>
+  `);
+}
+
+async function guardarCambioClave() {
+  const actual = $('#f-clave-actual').value;
+  const nueva = $('#f-clave-nueva').value;
+  const nueva2 = $('#f-clave-nueva2').value;
+  const err = $('#f-clave-error');
+  if (!/^\d{6}$/.test(actual) || !/^\d{6}$/.test(nueva)) { err.textContent = 'Las claves deben tener exactamente 6 dígitos.'; return; }
+  if (nueva !== nueva2) { err.textContent = 'Las nuevas claves no coinciden.'; return; }
+  try {
+    const user = await api.post('/api/auth/cambiar-clave', { userId: STATE.user.id, passwordActual: actual, nuevaClave: nueva });
+    STATE.user = user;
+    closeModal();
+    mostrarCodigoRecuperacion(user.recoveryCode, true);
+  } catch (ex) { err.textContent = ex.message; }
+}
+
+async function abrirCodigoRecuperacion() {
+  openModal('Código de recuperación', `
+    <p class="muted" style="margin:0 0 16px;">Por seguridad, confirma tu usuario y tu clave. Se generará un código nuevo y el anterior quedará invalidado.</p>
+    <label>Usuario<input id="f-rec-view-user" type="text" autocomplete="username" value="${escapeHtml(STATE.user.username)}"></label>
+    <label>Clave actual<input id="f-rec-view-pass" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password"></label>
+    <p class="field-error" id="f-rec-view-error"></p>
+    <button class="btn-primary" style="width:100%;" onclick="mostrarNuevoCodigoRecuperacion()">Mostrar código</button>
+  `);
+}
+
+async function mostrarNuevoCodigoRecuperacion() {
+  const username = $('#f-rec-view-user').value.trim();
+  const password = $('#f-rec-view-pass').value;
+  const err = $('#f-rec-view-error');
+  try {
+    const result = await api.post('/api/auth/codigo-recuperacion', { userId: STATE.user.id, username, password });
+    mostrarCodigoRecuperacion(result.recoveryCode, true);
+  } catch (ex) { err.textContent = ex.message; }
+}
+
+function mostrarCodigoRecuperacion(code, desdeConfiguracion = false) {
+  $('#recovery-content').innerHTML = `<h1>Guarda tu código de recuperación</h1><p class="muted" style="margin:0 0 18px;">${desdeConfiguracion ? 'Este es tu nuevo código. El código anterior ya no es válido.' : 'Es la única forma de recuperar tu cuenta si olvidas la clave. No lo vamos a volver a mostrar.'}</p><div class="share-code">${escapeHtml(code)}</div><button class="btn-secondary" style="margin-top:14px;" onclick="copiarTexto('${String(code).replace(/'/g, "\\'")}')">Copiar código</button><label class="check-row" style="margin-top:18px;"><input type="checkbox" id="recovery-check">Ya guardé mi código de recuperación en un lugar seguro.</label><button class="btn-primary" id="recovery-continuar" disabled style="margin-top:14px;">Continuar</button>`;
+  $('#recovery-check').addEventListener('change', (e) => { $('#recovery-continuar').disabled = !e.target.checked; });
+  $('#recovery-continuar').addEventListener('click', () => { if (desdeConfiguracion) { showScreen('screen-app'); openConfiguracion(); } else proceedAfterLogin(); });
+  showScreen('screen-recovery');
+}
+
+function copiarTexto(texto) {
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(() => toast('Copiado')).catch(() => toast('Copia manualmente: ' + texto));
+  else toast('Copia manualmente: ' + texto);
+}
+
 function pedirConfirmacionEliminarCuenta() {
   $('#modal-title').textContent = 'Eliminar cuenta';
   $('#modal-body').innerHTML = `
     <div class="notice-box">
       <b>¿Estás seguro?</b> Esta acción no se puede deshacer. Se borra tu cuenta y todo lo que hayas guardado (trabajo, estudio, eventos, verificaciones).
     </div>
-    <label>Confirma tu contraseña<input id="f-del-pass" type="password" autocomplete="current-password"></label>
+    <label>Confirma tu clave<input id="f-del-pass" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"></label>
     <p class="field-error" id="f-del-error"></p>
     <div class="notif-actions">
-      <button class="btn-secondary" onclick="openPerfil()">Cancelar</button>
+      <button class="btn-secondary" onclick="openConfiguracion()">Cancelar</button>
       <button class="btn-ghost-danger" onclick="confirmarEliminarCuenta()">Sí, eliminar mi cuenta</button>
     </div>
   `;
@@ -135,14 +237,31 @@ async function confirmarEliminarCuenta() {
 }
 
 function openInformacion() {
-  openModal('Información', `
-    <div style="text-align:center;display:flex;flex-direction:column;gap:6px;padding:8px 0;">
+  openModal('Información de Riverosapay', `
+    <div style="text-align:center;display:flex;flex-direction:column;gap:7px;padding:8px 0;">
       <img src="img/icon-192.png" alt="" style="width:64px;height:64px;border-radius:16px;margin:0 auto 10px;">
-      <p style="margin:0;font-weight:700;color:var(--green-900);">Desarrollado por riverojsx</p>
-      <p class="muted" style="margin:0;">Versión 1.0 BETA</p>
+      <p style="margin:0;font-weight:700;color:var(--green-900);">Riverosapay</p>
+      <p class="muted" style="margin:0;">prototipo desarrollado por riverojsx, organizador, versión beta</p>
     </div>
   `);
 }
+
+function instalarMenuConfiguracion() {
+  const drawer = $('#drawer');
+  if (!drawer || $('#drawer-configuracion')) return;
+  const item = document.createElement('button');
+  item.className = 'drawer-item';
+  item.id = 'drawer-configuracion';
+  item.innerHTML = `${ICONS.historial} Configuración`;
+  const referencia = $('#drawer-informacion') || $('#drawer-logout');
+  drawer.insertBefore(item, referencia);
+  item.addEventListener('click', () => { closeDrawer(); openConfiguracion(); });
+  if ($('#drawer-informacion')) $('#drawer-informacion').classList.add('hidden');
+}
+
+// La configuración pertenece al menú, no al avatar. Se instala cuando todos los módulos
+// ya están presentes sin modificar el flujo de inicio de sesión.
+setTimeout(instalarMenuConfiguracion, 0);
 
 // Se conserva para compatibilidad con el HTML de la versión anterior, pero ya
 // no se ejecuta durante el alta: las cuentas nuevas no eligen un rol.
