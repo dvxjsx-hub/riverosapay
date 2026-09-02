@@ -4,6 +4,25 @@
 
 const CLAVE_USUARIO_REGEX = /^\d{6}$/;
 
+function instalarVisorClave6(campo) {
+  if (!campo || campo.dataset.claveViewer === '1') return;
+  campo.dataset.claveViewer = '1';
+  const wrap = document.createElement('div');
+  wrap.className = 'clave6-viewer';
+  wrap.setAttribute('aria-hidden', 'true');
+  wrap.innerHTML = '<span></span><span></span><span></span><span></span><span></span><span></span>';
+  campo.insertAdjacentElement('afterend', wrap);
+  const actualizar = () => {
+    const valor = campo.value || '';
+    [...wrap.children].forEach((slot, i) => { slot.textContent = valor[i] ? '•' : ''; slot.classList.toggle('filled', !!valor[i]); });
+  };
+  campo.addEventListener('input', () => {
+    campo.value = (campo.value || '').replace(/\D/g, '');
+    actualizar();
+  });
+  actualizar();
+}
+
 function configurarCamposClave6() {
   ['#reg-pass', '#reg-pass2', '#f-rec-pass'].forEach(selector => {
     const campo = $(selector);
@@ -13,10 +32,12 @@ function configurarCamposClave6() {
     campo.minLength = 6;
     campo.maxLength = 6;
     campo.autocomplete = selector === '#f-rec-pass' ? 'new-password' : campo.autocomplete;
-    campo.placeholder = selector === '#f-rec-pass' ? '6 dígitos' : '6 dígitos';
+    campo.placeholder = '6 dígitos';
+    instalarVisorClave6(campo);
   });
 
   // El login es compartido con Admin: NO poner maxlength aquí.
+  // Usuario normal: exactamente 6 dígitos. Admin: puede continuar hasta su clave completa.
   const login = $('#log-pass');
   if (login) {
     login.inputMode = 'numeric';
@@ -24,6 +45,7 @@ function configurarCamposClave6() {
     login.removeAttribute('maxlength');
     login.removeAttribute('minlength');
     login.placeholder = '6 dígitos';
+    instalarVisorClave6(login);
   }
 }
 
