@@ -24,7 +24,16 @@ const amistadesRoutes = require('./src/routes/amistades.routes');
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Evita que un navegador conserve una versión anterior del frontend durante
+// una tanda de cambios. La API no depende de esta política de caché.
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    if (/\.(?:html|js|css)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    }
+  }
+}));
 
 // Autenticación pública y administración tienen sus propios controles.
 app.use('/api/auth', authRoutes);
