@@ -46,7 +46,7 @@ async function crearTurno(req, res) {
   if (asignado && asignado !== empleadoId && !amistades.existe(empleadoId, asignado)) return res.status(400).json({ error: 'El BOSS seleccionado debe ser una de tus amistades.' });
 
   const lug = trabajo.buscarOCrearLugar(empleadoId, nombreLugar);
-  const turno = { id: newId('trn'), empleadoId, lugarId: lug.id, fecha, dia: dia || '', horaInicio, horaFin, descripcion: (descripcion || '').trim(), pagado: false, valor: null, jefeAsignadoId: asignado, eliminacionPendiente: false };
+  const turno = { id: newId('trn'), empleadoId, lugarId: lug.id, fecha, dia: dia || '', horaInicio, horaFin, descripcion: (descripcion || '').trim(), pagado: false, valor: null, jefeAsignadoId: asignado, eliminacionPendiente: false, finalizado: false, finalizadoAt: null };
   trabajo.crearTurno(turno);
   await save();
   trabajo.broadcast(empleadoId);
@@ -96,15 +96,41 @@ async function actualizarTurno(req, res) {
   res.json(turno);
 }
 
+async function finalizarTurno(req, res) {
+  const turno = trabajo.buscarTurnoPorId(req.params.turnoId);
+  if (!turno) return res.status(404).json({ error: 'Trabajo no encontrado.' });
+  const actorId = usuarioActual(req);
+  const esEmpleado = actorId === turno.empleadoId;
+  const esBossAsignado = actorId === turno.jefeAsignadoId;
+  if (!esEmpleado && !esBossAsignado) return res.status(403).json({ error: 'Solo el empleado o el BOSS asignado puede finalizar este trabajo.' });
+  if (turno.finalizado === true) return res.status(400).json({ error: 'Este trabajo ya está finalizado.' });
+
+  trabajo.marcarFinalizado(turno.id);
+  await save();
+  trabajo.broadcast(turno.empleadoId);
+
+  const lug = trabajo.buscarLugarPorId(turno.lugarId);
+  if (esBossAsignado) {
+    const boss = usuarios.buscarPorId(actorId);
+    await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_finalizado', { jefeUsername: boss ? boss.username : 'Tu BOSS', lugar: lug ? lug.nombre : '' });
+  } else if (turno.jefeAsignadoId) {
+    const empleado = usuarios.buscarPorId(actorId);
+    await notificaciones.crearParaUsuario(turno.jefeAsignadoId, 'trabajo_finalizado', { empleadoUsername: empleado ? empleado.username : '', lugar: lug ? lug.nombre : '' });
+  }
+  res.json({ turno });
+}
+
 async function eliminarTurno(req, res) {
   const turno = trabajo.buscarTurnoPorId(req.params.turnoId);
   if (!turno) return res.status(404).json({ error: 'Trabajo no encontrado.' });
   const actorId = usuarioActual(req);
   const lug = trabajo.buscarLugarPorId(turno.lugarId);
+  const esEmpleado = actorId === turno.empleadoId;
+  const esBossAsignado = actorId === turno.jefeAsignadoId;
 
-  if (actorId !== turno.empleadoId && !verificacion.tieneAcceso(actorId, turno.empleadoId) && !trabajo.tieneTrabajoAsignado(actorId, turno.empleadoId)) return res.status(403).json({ error: 'No tienes acceso a este trabajo.' });
+  if (!esEmpleado && !esBossAsignado) return res.status(403).json({ error: 'No tienes acceso a este trabajo.' });
 
-  if (actorId !== turno.empleadoId) {
+  if (esBossAsignado) {
     trabajo.eliminarTurno(turno.id); await save(); trabajo.broadcast(turno.empleadoId);
     await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_eliminado', { jefeUsername: req.body.actorJefeUsername || 'Tu BOSS', lugar: lug ? lug.nombre : '' });
     return res.json({ eliminado: true });
@@ -126,7 +152,7 @@ async function eliminarTurno(req, res) {
 async function confirmarEliminacion(req, res) {
   const turno = trabajo.buscarTurnoPorId(req.params.turnoId); if (!turno) return res.status(404).json({ error: 'Trabajo no encontrado.' });
   const actorId = usuarioActual(req);
-  if (actorId === turno.empleadoId || (!verificacion.tieneAcceso(actorId, turno.empleadoId) && !trabajo.tieneTrabajoAsignado(actorId, turno.empleadoId))) return res.status(403).json({ error: 'Solo el BOSS autorizado puede confirmar esta eliminación.' });
+  if (actorId !== turno.jefeAsignadoId) return res.status(403).json({ error: 'Solo el BOSS asignado puede confirmar esta eliminación.' });
   const lug = trabajo.buscarLugarPorId(turno.lugarId); trabajo.eliminarTurno(turno.id); await save(); trabajo.broadcast(turno.empleadoId);
   await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_eliminado', { jefeUsername: req.body.jefeUsername || 'Tu BOSS', lugar: lug ? lug.nombre : '' }); res.json({ eliminado: true });
 }
@@ -134,8 +160,8 @@ async function confirmarEliminacion(req, res) {
 async function rechazarEliminacion(req, res) {
   const turno = trabajo.buscarTurnoPorId(req.params.turnoId); if (!turno) return res.status(404).json({ error: 'Trabajo no encontrado.' });
   const actorId = usuarioActual(req);
-  if (actorId === turno.empleadoId || (!verificacion.tieneAcceso(actorId, turno.empleadoId) && !trabajo.tieneTrabajoAsignado(actorId, turno.empleadoId))) return res.status(403).json({ error: 'Solo el BOSS autorizado puede rechazar esta eliminación.' });
+  if (actorId !== turno.jefeAsignadoId) return res.status(403).json({ error: 'Solo el BOSS asignado puede rechazar esta eliminación.' });
   turno.eliminacionPendiente = false; await save(); trabajo.broadcast(turno.empleadoId); await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_eliminacion_rechazada', { jefeUsername: req.body.jefeUsername || 'Tu BOSS' }); res.json({ eliminado: false });
 }
 
-module.exports = { obtenerSnapshot, obtenerMisJefes, obtenerTrabajosComoJefe, crearTurno, actualizarTurno, eliminarTurno, confirmarEliminacion, rechazarEliminacion };
+module.exports = { obtenerSnapshot, obtenerMisJefes, obtenerTrabajosComoJefe, crearTurno, actualizarTurno, finalizarTurno, eliminarTurno, confirmarEliminacion, rechazarEliminacion };
