@@ -28,9 +28,9 @@ function newShareCode(db) {
   return code;
 }
 
-// reglas de LOGIN seguro
+// Reglas de LOGIN: usuario de 5-10 letras y clave normal de exactamente 6 dígitos.
 const USERNAME_REGEX = /^[a-z]{5,10}$/;
-const PASSWORD_REGEX = /^[A-Za-z0-9]{6,12}$/;
+const PASSWORD_REGEX = /^\d{6}$/;
 
 // hash del código de recuperación (sal distinta a la de la contraseña)
 function hashRecoveryCode(code) {
