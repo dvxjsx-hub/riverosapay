@@ -20,8 +20,61 @@ function agregar(usuarioId, amistadId, amistadUsername) {
   return amistad;
 }
 
-function eliminarDeUsuario(userId) {
-  db.amistades = db.amistades.filter(a => a.usuarioId !== userId && a.amistadId !== userId);
+function eliminar(usuarioId, amistadId) {
+  const antes = db.amistades.length;
+  db.amistades = db.amistades.filter(a => !(a.usuarioId === usuarioId && a.amistadId === amistadId));
+  return db.amistades.length !== antes;
 }
 
-module.exports = { amistadesDe, existe, existeEntre, agregar, eliminarDeUsuario };
+function eliminarEntre(a, b) {
+  eliminar(a, b);
+  eliminar(b, a);
+}
+
+function solicitudPendienteDe(emisorId, receptorId) {
+  return db.amistadSolicitudes.find(s => s.emisorId === emisorId && s.receptorId === receptorId && s.estado === 'pendiente');
+}
+
+function solicitudPendienteEntre(a, b) {
+  return db.amistadSolicitudes.find(s =>
+    ((s.emisorId === a && s.receptorId === b) || (s.emisorId === b && s.receptorId === a)) && s.estado === 'pendiente'
+  );
+}
+
+function crearSolicitud(emisorId, emisorUsername, receptorId, receptorUsername) {
+  const solicitud = {
+    id: `ars_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    emisorId,
+    emisorUsername,
+    receptorId,
+    receptorUsername,
+    fecha: Date.now(),
+    estado: 'pendiente'
+  };
+  db.amistadSolicitudes.push(solicitud);
+  return solicitud;
+}
+
+function solicitudesRecibidas(userId) {
+  return db.amistadSolicitudes.filter(s => s.receptorId === userId && s.estado === 'pendiente')
+    .sort((a, b) => b.fecha - a.fecha);
+}
+
+function buscarSolicitud(id) {
+  return db.amistadSolicitudes.find(s => s.id === id);
+}
+
+function eliminarSolicitud(id) {
+  db.amistadSolicitudes = db.amistadSolicitudes.filter(s => s.id !== id);
+}
+
+function eliminarDeUsuario(userId) {
+  db.amistades = db.amistades.filter(a => a.usuarioId !== userId && a.amistadId !== userId);
+  db.amistadSolicitudes = db.amistadSolicitudes.filter(s => s.emisorId !== userId && s.receptorId !== userId);
+}
+
+module.exports = {
+  amistadesDe, existe, existeEntre, agregar, eliminar, eliminarEntre,
+  solicitudPendienteDe, solicitudPendienteEntre, crearSolicitud,
+  solicitudesRecibidas, buscarSolicitud, eliminarSolicitud, eliminarDeUsuario
+};
