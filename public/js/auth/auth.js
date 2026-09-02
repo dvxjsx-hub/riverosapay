@@ -22,9 +22,31 @@ function setAuthMode(mode) {
   $('#auth-toggle').dataset.next = isLogin ? 'register' : 'login';
   $('#reg-error').textContent = '';
   $('#log-error').textContent = '';
+
+  // En Tanda 6 ya no existe el concepto de dispositivo guardado.
   const reset = $('#auth-reset'); if (reset) reset.remove();
+
+  // Texto exacto del nuevo acceso normal.
+  const regUser = $('#reg-user');
+  const regPass = $('#reg-pass');
+  const regPass2 = $('#reg-pass2');
+  const logUser = $('#log-user');
+  const logPass = $('#log-pass');
+  if (regUser) regUser.placeholder = '';
+  if (regPass) regPass.placeholder = '4 dígitos';
+  if (regPass2) regPass2.placeholder = 'Repite la clave';
+  if (logPass) logPass.placeholder = '';
+  const regLabels = $('#form-register')?.querySelectorAll('label');
+  if (regLabels?.[1]) regLabels[1].childNodes[0].textContent = 'Clave';
+  if (regLabels?.[2]) regLabels[2].childNodes[0].textContent = 'Confirmar clave';
+  const logLabels = $('#form-login')?.querySelectorAll('label');
+  if (logLabels?.[1]) logLabels[1].childNodes[0].textContent = 'Ingresa tu clave';
+
   const legacy = $('#auth-legacy');
-  if (legacy) legacy.classList.toggle('hidden', !isLogin || localStorage.getItem('riverosapay_migrated_' + ($('#log-user')?.value || '').trim().toLowerCase()) === '1');
+  if (legacy) {
+    const username = (logUser?.value || '').trim().toLowerCase();
+    legacy.classList.toggle('hidden', !isLogin || !username || localStorage.getItem('riverosapay_migrated_' + username) === '1');
+  }
 }
 
 function cargarModuloAdmin() {
@@ -52,6 +74,7 @@ function prepararCampoClave(campo) {
   campo.inputMode = 'numeric';
   campo.maxLength = 4;
   campo.minLength = 4;
+  campo.pattern = '\\d{4}';
   campo.addEventListener('input', () => {
     const limpio = campo.value.replace(/\D/g, '').slice(0, 4);
     if (campo.value !== limpio) campo.value = limpio;
@@ -88,7 +111,6 @@ function setupAuth() {
   });
   $('#auth-olvide').addEventListener('click', (e) => { e.preventDefault(); abrirRecuperarContrasena(); });
 
-  // Sincroniza el estado inicial después de crear dinámicamente la opción legacy.
   setAuthMode($('#form-login').classList.contains('hidden') ? 'register' : 'login');
 
   $('#form-register').addEventListener('submit', async (e) => {
@@ -126,6 +148,7 @@ function setupAuth() {
 
 function abrirLoginUsuarioViejo() {
   openModal('¿USUARIO VIEJO?', `<p class="muted">Usa aquí tu usuario y contraseña del sistema anterior. Después tendrás que crear tu nueva clave de 4 dígitos.</p><label>Usuario<input id="legacy-user" type="text" autocomplete="username"></label><label>Contraseña anterior<input id="legacy-pass" type="password" autocomplete="current-password"></label><p class="field-error" id="legacy-error"></p><button class="btn-primary" onclick="entrarUsuarioViejo()">Continuar</button>`);
+  prepararCampoUsuario($('#legacy-user'));
 }
 
 async function entrarUsuarioViejo() {
@@ -154,12 +177,11 @@ async function migrarCuentaVieja() {
   if (!/^\d{4}$/.test(newPassword)) { err.textContent = 'La nueva clave debe tener exactamente 4 dígitos.'; return; }
   if (newPassword !== confirmPassword) { err.textContent = 'Las claves no coinciden.'; return; }
   try {
-    const user = await api.post('/api/auth/migrar-clave', { newPassword, confirmPassword });
-    ocultarAccesoUsuarioViejo(user.username);
-    STATE.user = user;
+    const result = await api.post('/api/auth/migrar-clave', { newPassword, confirmPassword });
+    ocultarAccesoUsuarioViejo(result.username);
+    STATE.user = result;
     closeModal();
-    toast('Cuenta actualizada. Ahora usarás tu nueva clave de 4 dígitos.');
-    enterApp();
+    mostrarCodigoRecuperacion(result.recoveryCode, { mensaje: 'Tu clave fue actualizada. Guarda también este nuevo código: el anterior ya no es válido.', continuar: enterApp });
   } catch (ex) { err.textContent = ex.message; }
 }
 
@@ -169,10 +191,14 @@ function proceedAfterLogin() {
   enterApp();
 }
 
-function mostrarCodigoRecuperacion(code) {
-  $('#recovery-content').innerHTML = `<h1>Guarda tu código de recuperación</h1><p class="muted" style="margin:0 0 18px;">Es la única forma de recuperar tu cuenta si olvidas tu clave. Guárdalo en un lugar seguro.</p><div class="share-code">${code}</div><button class="btn-secondary" style="margin-top:14px;" onclick="copiarTexto('${code}')">Copiar código</button><label class="check-row" style="margin-top:18px;"><input type="checkbox" id="recovery-check">Ya guardé mi código de recuperación en un lugar seguro.</label><button class="btn-primary" id="recovery-continuar" disabled style="margin-top:14px;">Continuar</button>`;
+function mostrarCodigoRecuperacion(code, opciones = {}) {
+  if (!code) return;
+  const mensaje = opciones.mensaje || 'Es la única forma de recuperar tu cuenta si olvidas tu clave. Guárdalo en un lugar seguro.';
+  const continuar = opciones.continuar || proceedAfterLogin;
+  $('#recovery-content').innerHTML = `<h1>Guarda tu código de recuperación</h1><p class="muted" style="margin:0 0 18px;">${mensaje}</p><div class="share-code">${code}</div><button class="btn-secondary" style="margin-top:14px;" onclick="copiarTexto('${code}')">Copiar código</button><label class="check-row" style="margin-top:18px;"><input type="checkbox" id="recovery-check">Ya guardé mi código de recuperación en un lugar seguro.</label><button class="btn-primary" id="recovery-continuar" disabled style="margin-top:14px;">Continuar</button>`;
   $('#recovery-check').addEventListener('change', (e) => { $('#recovery-continuar').disabled = !e.target.checked; });
-  $('#recovery-continuar').addEventListener('click', proceedAfterLogin); showScreen('screen-recovery');
+  $('#recovery-continuar').addEventListener('click', continuar);
+  showScreen('screen-recovery');
 }
 
 function copiarTexto(texto) {
@@ -182,15 +208,17 @@ function copiarTexto(texto) {
 
 function abrirRecuperarContrasena() {
   openModal('Recuperar acceso', `<label>Usuario<input id="f-rec-user" type="text" autocomplete="username"></label><label>Código de recuperación<input id="f-rec-code" type="text" placeholder="XXXX-XXXX-XXXX"></label><label>Nueva clave<input id="f-rec-pass" type="password" inputmode="numeric" placeholder="4 dígitos" minlength="4" maxlength="4"></label><p class="field-error" id="f-rec-error"></p><button class="btn-primary" onclick="enviarRecuperacion()">Restablecer clave</button>`);
-  prepararCampoUsuario($('#f-rec-user')); prepararCampoClave($('#f-rec-pass'));
+  prepararCampoUsuario($('#f-rec-user')); prepararCampoClave($('#f-rec-pass));
 }
 
 async function enviarRecuperacion() {
   const username = $('#f-rec-user').value.trim().toLowerCase(), recoveryCode = $('#f-rec-code').value.trim(), newPassword = $('#f-rec-pass').value, err = $('#f-rec-error');
   if (!/^\d{4}$/.test(newPassword)) { err.textContent = 'La nueva clave debe tener exactamente 4 dígitos.'; return; }
   try {
-    await api.post('/api/auth/recuperar', { username, recoveryCode, newPassword });
+    const result = await api.post('/api/auth/recuperar', { username, recoveryCode, newPassword });
+    localStorage.setItem('riverospay_last_user', username);
     ocultarAccesoUsuarioViejo(username);
-    closeModal(); toast('Clave actualizada. Ya puedes iniciar sesión.'); setAuthMode('login'); $('#log-user').value = username;
+    closeModal();
+    mostrarCodigoRecuperacion(result.recoveryCode, { mensaje: 'Tu clave fue restablecida. Se generó un nuevo código de recuperación y el anterior ya no es válido.', continuar: () => { setAuthMode('login'); $('#log-user').value = username; $('#log-pass').value = ''; showScreen('screen-auth'); $('#log-pass').focus({ preventScroll: true }); } });
   } catch (ex) { err.textContent = ex.message; }
 }
