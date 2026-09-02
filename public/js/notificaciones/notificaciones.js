@@ -2,12 +2,7 @@
    Riverosapay · NOTIFICACIONES
    Las notificaciones se separan por modo: EMPLEADO / BOSS.
    ============================================================ */
-
-function modoDestinoNotificacion(n) {
-  if (n && (n.modoDestino === 'jefe' || n.modoDestino === 'empleado')) return n.modoDestino;
-  if (n && (n.tipo === 'jefe_asignado_trabajo' || n.tipo === 'trabajo_eliminacion_solicitada')) return 'jefe';
-  return 'empleado';
-}
+function modoDestinoNotificacion(n) { if (n && (n.modoDestino === 'jefe' || n.modoDestino === 'empleado')) return n.modoDestino; if (n && (n.tipo === 'jefe_asignado_trabajo' || n.tipo === 'trabajo_eliminacion_solicitada')) return 'jefe'; return 'empleado'; }
 function notificacionesDelModoActual() { return (STATE.notificaciones || []).filter(n => modoDestinoNotificacion(n) === modoActualUsuario()); }
 function updateNotifBadge() { const hayAlgoPendiente = notificacionesDelModoActual().some(n => (n.tipo === 'solicitud' && n.estado === 'pendiente') || (n.tipo !== 'solicitud' && !n.leida)); const dot = $('#notif-dot'); if (dot) dot.classList.toggle('hidden', !hayAlgoPendiente); }
 async function loadNotificaciones() { STATE.notificaciones = await api.get(`/api/notificaciones/${STATE.user.id}`); updateNotifBadge(); return STATE.notificaciones; }
@@ -34,8 +29,7 @@ async function openNotificaciones() {
     const huboSinLeer = visibles.some(n => n.tipo !== 'solicitud' && !n.leida);
     if (huboSinLeer) {
       await api.post(`/api/notificaciones/${STATE.user.id}/marcar-leidas`, { modo: modoActualUsuario() });
-      const modo = modoActualUsuario(); STATE.notificaciones.forEach(n => { if (modoDestinoNotificacion(n) === modo && n.tipo !== 'solicitud') n.leida = true; });
-      updateNotifBadge();
+      const modo = modoActualUsuario(); STATE.notificaciones.forEach(n => { if (modoDestinoNotificacion(n) === modo && n.tipo !== 'solicitud') n.leida = true; }); updateNotifBadge();
     }
   } catch (ex) { toast(ex.message); }
 }
@@ -44,3 +38,8 @@ function renderNotificacionesModal() {
   const html = list.length ? list.map(n => `<div class="notif-row"><span class="notif-text">${notifTextoHTML(n)}</span><span class="notif-fecha">${formatFecha(n.fecha)}</span>${n.tipo === 'amistad_solicitud' ? '<div class="notif-actions"><button class="btn-primary" type="button" onclick="closeModal();openAmistades();">Ver solicitud</button></div>' : ''}</div>`).join('') : emptyCardHTML('NOTIFICACIONES · ' + modoTitulo, 'No tienes notificaciones por ahora.', 'historial');
   openModal('Notificaciones · ' + modoTitulo, html);
 }
+
+function showRequestCard(solicitud) { STATE.pendingRequest = solicitud; $('#request-text').textContent = `${solicitud.jefeUsername} quiere verificar tu información en tiempo real.`; $('#request-overlay').classList.add('open'); $('#request-card').classList.add('open'); }
+function hideRequestCard() { $('#request-overlay').classList.remove('open'); $('#request-card').classList.remove('open'); STATE.pendingRequest = null; }
+function setupRequestCard() { $('#request-aceptar').addEventListener('click', () => responderSolicitud('aceptar')); $('#request-rechazar').addEventListener('click', () => responderSolicitud('rechazar')); }
+async function responderSolicitud(accion) { if (!STATE.pendingRequest) return; const id = STATE.pendingRequest.id; hideRequestCard(); try { await api.post(`/api/join-requests/${id}/responder`, { accion }); toast(accion === 'aceptar' ? 'Verificación aceptada' : 'Solicitud rechazada'); await loadNotificaciones(); } catch (ex) { toast(ex.message); } }
