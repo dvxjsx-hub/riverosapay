@@ -1,6 +1,6 @@
 /* ============================================================
    Riverospay · TRABAJO
-   Tanda 5: finalizados, pagos, borrado y selector
+   Bloque 5: trabajos personales, jefe fijo y pagos compartidos
    ============================================================ */
 
 const TRABAJO_VISTAS = { HORARIOS: 'horarios', FINALIZADOS: 'finalizados' };
@@ -122,7 +122,7 @@ async function openAddTrabajo() {
       const data = await api.get(`/api/amistades/${STATE.user.id}`);
       STATE.amistades = data.amistades || [];
       const opciones = STATE.amistades.map(a => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.nombreCompleto || a.username)}</option>`).join('');
-      amistadSelectHtml = `<label>Jefe (amistad)<select id="f-trabajo-jefe"><option value="">Sin jefe</option>${opciones}</select></label><p class="field-hint">El jefe se selecciona únicamente entre tus amistades.</p>`;
+      amistadSelectHtml = `<label>Jefe (amistad)<select id="f-trabajo-jefe"><option value="">Sin jefe · Trabajo personal</option>${opciones}</select></label><p class="field-hint">El jefe queda fijado al crear el trabajo. Si eliges “Sin jefe”, será un trabajo personal.</p>`;
     } catch (ex) { amistadSelectHtml = '<p class="field-hint">No se pudieron cargar tus amistades.</p>'; }
   }
   openModal('Añadir trabajo', `<label>Lugar<input id="f-trabajo-lugar" type="text" placeholder="Ej. Manga - Fontana" required></label><label>Fecha<input id="f-trabajo-fecha" type="date" required></label><div class="row-2"><label>Hora inicio<input id="f-trabajo-hi" type="time" required></label><label>Hora fin<input id="f-trabajo-hf" type="time" required></label></div><label>Descripción (opcional)<textarea id="f-trabajo-desc" placeholder="Notas sobre este trabajo..."></textarea>${amistadSelectHtml}<p class="field-error" id="f-trabajo-error"></p><button class="btn-primary" onclick="submitTrabajo()">Guardar trabajo</button>`);
@@ -178,31 +178,29 @@ function openTurnoDetail(turnoId) {
   if (!turno) return;
   const lugar = data.lugares.find(l => l.id === turno.lugarId);
   const jefe = nombreJefePorId(turno.jefeAsignadoId);
-  const valorHtml = isJefe ? `<label>Valor del día (opcional)<input id="f-valor" type="number" min="0" step="0.01" value="${turno.valor ?? ''}" placeholder="0.00"></label><button class="btn-secondary" onclick="guardarValor('${turno.id}')">Guardar valor</button>` : (turno.valor !== null && turno.valor !== undefined ? `<div class="detail-row"><span>Valor</span><span>$${turno.valor}</span></div>` : '');
+  const esPersonal = !turno.jefeAsignadoId;
+  const valorActual = turno.valor !== null && turno.valor !== undefined ? turno.valor : '';
+
+  const valorHtml = isJefe
+    ? `<label>Valor del día (opcional)<input id="f-valor" type="number" min="0" step="0.01" value="${valorActual}" placeholder="0.00"></label><button class="btn-secondary" onclick="guardarValor('${turno.id}')">Guardar valor</button>`
+    : `<div class="detail-row"><span>${esPersonal ? 'Trabajo personal' : 'Jefe'}</span><span>${escapeHtml(esPersonal ? 'Sin jefe' : (jefe || 'Jefe asignado'))}</span></div><label>Valor del pago<input id="f-valor-empleado" type="number" min="0" step="0.01" value="${valorActual}" placeholder="0.00"></label><label style="display:flex;align-items:center;gap:10px;cursor:pointer;"><input id="f-pagado-empleado" type="checkbox" ${turno.pagado ? 'checked' : ''}> Marcar como pagado</label><button class="btn-secondary" onclick="guardarPagoEmpleado('${turno.id}')">Guardar pago</button>${esPersonal ? '<p class="field-hint">Este es un trabajo personal. Puedes registrar y llevar aquí tu propio pago.</p>' : '<p class="field-hint">Tu BOSS recibirá una notificación cuando registres o cambies este pago.</p>'}`;
+
   const estadoHtml = isJefe ? `<div class="toggle-pagado"><button class="${!turno.pagado ? 'active no' : ''}" onclick="setPagado('${turno.id}', false)">Día no pagado</button><button class="${turno.pagado ? 'active si' : ''}" onclick="setPagado('${turno.id}', true)">Día pagado</button></div>` : `<div class="detail-row"><span>Estado</span><span>${turno.pagado ? 'Pagado' : 'No pagado'}</span></div>`;
-  const jefeHtml = !isJefe ? `<div class="detail-row"><span>Jefe</span><span>${escapeHtml(jefe || 'Sin jefe')} <button class="link-btn" style="margin:0 0 0 6px;padding:0;font-size:12px;" onclick="abrirCambiarJefe('${turno.id}')">Cambiar</button></span></div>` : `<div class="detail-row"><span>Jefe</span><span>${escapeHtml(jefe || 'Sin jefe')}</span></div>`;
+  const jefeHtml = isJefe ? `<div class="detail-row"><span>Jefe</span><span>${escapeHtml(jefe || 'Sin jefe')}</span></div>` : '';
   const eliminarHtml = !turno.eliminacionPendiente ? `<button class="btn-ghost-danger" style="width:100%;" onclick="pedirConfirmacionEliminar('${turno.id}')">Eliminar trabajo</button>` : `<div class="notice-box">Solicitud de eliminación pendiente.</div>`;
   openModal('Detalle del trabajo', `<div class="detail-row"><span>Lugar</span><span>${escapeHtml(lugar ? lugar.nombre : '—')}</span></div><div class="detail-row"><span>Fecha</span><span>${turno.fecha ? escapeHtml(formatearFechaTrabajo(turno.fecha)) : escapeHtml(turno.dia || '—')}</span></div><div class="detail-row"><span>Hora</span><span>${escapeHtml(turno.horaInicio)} – ${escapeHtml(turno.horaFin)}</span></div><div><p class="muted" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin:0 0 6px;">Descripción</p><p style="margin:0;font-size:14px;">${turno.descripcion ? escapeHtml(turno.descripcion) : 'Sin descripción.'}</p></div>${jefeHtml}${valorHtml}${estadoHtml}${eliminarHtml}`);
 }
 
-async function abrirCambiarJefe(turnoId) {
+async function guardarPagoEmpleado(turnoId) {
+  const raw = $('#f-valor-empleado').value;
+  const pagado = $('#f-pagado-empleado').checked;
+  if (raw !== '' && (!Number.isFinite(Number(raw)) || Number(raw) < 0)) { toast('El valor del trabajo no es válido.'); return; }
   try {
-    const data = await api.get(`/api/amistades/${STATE.user.id}`);
-    STATE.amistades = data.amistades || [];
-    const opciones = STATE.amistades.map(a => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.nombreCompleto || a.username)}</option>`).join('');
-    $('#modal-title').textContent = 'Cambiar jefe asignado';
-    $('#modal-body').innerHTML = `<label>Jefe<select id="f-cambiar-jefe"><option value="">Ninguno</option>${opciones}</select></label><p class="field-error" id="f-cambiar-jefe-error"></p><button class="btn-primary" onclick="guardarCambioJefe('${turnoId}')">Guardar</button><button class="link-btn" onclick="openTurnoDetail('${turnoId}')">Cancelar</button>`;
+    await api.patch(`/api/trabajo/turnos/${turnoId}/pago-empleado`, { valor: raw === '' ? null : Number(raw), pagado });
+    toast('Pago guardado');
+    await loadTrabajo();
+    openTurnoDetail(turnoId);
   } catch (ex) { toast(ex.message); }
-}
-
-async function guardarCambioJefe(turnoId) {
-  const valor = $('#f-cambiar-jefe').value;
-  try {
-    await api.patch(`/api/trabajo/turnos/${turnoId}`, { jefeAsignadoId: valor || null });
-    toast('Jefe actualizado');
-    if (STATE.viewMode === 'jefe-ver') { await refrescarJefeTrabajo(); renderJefeView(); }
-    else { await loadTrabajo(); openTurnoDetail(turnoId); }
-  } catch (ex) { $('#f-cambiar-jefe-error').textContent = ex.message; }
 }
 
 function pedirConfirmacionEliminar(turnoId) {
