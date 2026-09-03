@@ -1,6 +1,7 @@
-const { save } = require('../config/db');
+const { db, save } = require('../config/db');
 const trabajo = require('../models/trabajo.model');
 const amistades = require('../models/amistades.model');
+const trabajoSolicitudes = require('../models/trabajoSolicitudes.model');
 const verificacion = require('../models/verificacion.model');
 const notificaciones = require('../models/notificaciones.model');
 const usuarios = require('../models/usuarios.model');
@@ -57,6 +58,90 @@ async function crearTurno(req, res) {
   }
   if (creandoComoBoss) await notificaciones.crearParaUsuario(empleadoId, 'trabajo_añadido', { jefeUsername: actorJefeUsername || 'Tu BOSS', lugar: lug.nombre });
   res.json({ lugar: lug, turno });
+}
+
+async function crearSolicitudTrabajo(req, res) {
+  const jefeId = usuarioActual(req);
+  if (jefeId !== req.params.jefeId) return res.status(403).json({ error: 'La identidad del BOSS no coincide con la sesión.' });
+  const jefe = usuarios.buscarPorId(jefeId);
+  if (!jefe || (jefe.modoActual || jefe.role) !== 'jefe') return res.status(403).json({ error: 'Esta acción solo está disponible en modo BOSS.' });
+
+  const empleadoId = String((req.body && req.body.empleadoId) || '').trim();
+  const nombreLugar = String((req.body && req.body.lugar) || '').trim();
+  const fecha = String((req.body && req.body.fecha) || '').trim();
+  const horaInicio = String((req.body && req.body.horaInicio) || '').trim();
+  const horaFin = String((req.body && req.body.horaFin) || '').trim();
+  const dia = String((req.body && req.body.dia) || '').trim();
+  const descripcion = String((req.body && req.body.descripcion) || '').trim();
+
+  if (!empleadoId || !nombreLugar || !fecha || !horaInicio || !horaFin) return res.status(400).json({ error: 'Faltan datos del trabajo (amistad, lugar, fecha u hora).' });
+  if (empleadoId === jefeId) return res.status(400).json({ error: 'No puedes enviarte un trabajo a ti mismo.' });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return res.status(400).json({ error: 'La fecha del trabajo no es válida.' });
+  if (!amistades.existe(jefeId, empleadoId)) return res.status(403).json({ error: 'Solo puedes enviar trabajos a una de tus amistades.' });
+  const empleado = usuarios.buscarPorId(empleadoId);
+  if (!empleado) return res.status(404).json({ error: 'La amistad seleccionada ya no existe.' });
+
+  const solicitud = trabajoSolicitudes.crear({
+    id: newId('tsol'), jefeId, jefeUsername: jefe.username, jefeNombre: jefe.nombreCompleto || jefe.username,
+    empleadoId, empleadoUsername: empleado.username, lugar: nombreLugar, fecha,
+    dia: dia || new Intl.DateTimeFormat('es-CO', { weekday: 'long' }).format(new Date(`${fecha}T12:00:00`)),
+    horaInicio, horaFin, descripcion
+  });
+  await save();
+  await notificaciones.crearParaUsuario(empleadoId, 'trabajo_solicitud', {
+    modoDestino: 'empleado', trabajoSolicitudId: solicitud.id,
+    jefeId, jefeUsername: jefe.username, jefeNombre: jefe.nombreCompleto || jefe.username,
+    lugar: nombreLugar, fechaTrabajo: solicitud.fecha, dia: solicitud.dia,
+    horaInicio, horaFin, descripcion
+  });
+  res.json({ ok: true, solicitud });
+}
+
+async function responderSolicitudTrabajo(req, res) {
+  const empleadoId = usuarioActual(req);
+  const solicitud = trabajoSolicitudes.buscarPorId(req.params.solicitudId);
+  if (!solicitud) return res.status(404).json({ error: 'Solicitud de trabajo no encontrada.' });
+  if (solicitud.empleadoId !== empleadoId) return res.status(403).json({ error: 'Solo el destinatario puede responder esta solicitud.' });
+  if (solicitud.estado !== 'pendiente') return res.status(409).json({ error: 'Esta solicitud de trabajo ya fue respondida.' });
+
+  const accion = String((req.body && req.body.accion) || '').toLowerCase();
+  if (accion !== 'aceptar' && accion !== 'rechazar') return res.status(400).json({ error: 'Acción de solicitud no válida.' });
+
+  solicitud.estado = accion === 'aceptar' ? 'aceptado' : 'rechazado';
+  let turno = null;
+  if (accion === 'aceptar') {
+    const jefe = usuarios.buscarPorId(solicitud.jefeId);
+    if (!jefe || !amistades.existe(solicitud.jefeId, empleadoId)) {
+      solicitud.estado = 'rechazado';
+      await save();
+      return res.status(409).json({ error: 'La amistad con el BOSS ya no está disponible.' });
+    }
+    const lug = trabajo.buscarOCrearLugar(empleadoId, solicitud.lugar);
+    turno = {
+      id: newId('trn'), empleadoId, lugarId: lug.id, fecha: solicitud.fecha, dia: solicitud.dia || '',
+      horaInicio: solicitud.horaInicio, horaFin: solicitud.horaFin, descripcion: solicitud.descripcion || '',
+      pagado: false, valor: null, jefeAsignadoId: solicitud.jefeId,
+      eliminacionPendiente: false, finalizado: false, finalizadoAt: null
+    };
+    trabajo.crearTurno(turno);
+  }
+
+  await save();
+  if (accion === 'aceptar') {
+    trabajo.broadcast(empleadoId);
+    await notificaciones.crearParaUsuario(solicitud.jefeId, 'trabajo_solicitud_aceptada', {
+      modoDestino: 'jefe', empleadoId, empleadoUsername: solicitud.empleadoUsername,
+      empleadoNombre: (usuarios.buscarPorId(empleadoId) || {}).nombreCompleto || solicitud.empleadoUsername,
+      lugar: solicitud.lugar, fechaTrabajo: solicitud.fecha
+    });
+  } else {
+    await notificaciones.crearParaUsuario(solicitud.jefeId, 'trabajo_solicitud_rechazada', {
+      modoDestino: 'jefe', empleadoId, empleadoUsername: solicitud.empleadoUsername,
+      empleadoNombre: (usuarios.buscarPorId(empleadoId) || {}).nombreCompleto || solicitud.empleadoUsername,
+      lugar: solicitud.lugar, fechaTrabajo: solicitud.fecha
+    });
+  }
+  res.json({ ok: true, accion, solicitud, turno });
 }
 
 async function actualizarTurno(req, res) {
@@ -164,4 +249,4 @@ async function rechazarEliminacion(req, res) {
   turno.eliminacionPendiente = false; await save(); trabajo.broadcast(turno.empleadoId); await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_eliminacion_rechazada', { jefeUsername: req.body.jefeUsername || 'Tu BOSS' }); res.json({ eliminado: false });
 }
 
-module.exports = { obtenerSnapshot, obtenerMisJefes, obtenerTrabajosComoJefe, crearTurno, actualizarTurno, finalizarTurno, eliminarTurno, confirmarEliminacion, rechazarEliminacion };
+module.exports = { obtenerSnapshot, obtenerMisJefes, obtenerTrabajosComoJefe, crearTurno, crearSolicitudTrabajo, responderSolicitudTrabajo, actualizarTurno, finalizarTurno, eliminarTurno, confirmarEliminacion, rechazarEliminacion };
