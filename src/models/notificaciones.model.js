@@ -5,7 +5,7 @@ const { newId } = require('../utils/utils');
 // Las notificaciones pertenecen a una cuenta, pero pueden estar destinadas
 // específicamente al modo EMPLEADO o al modo BOSS.
 function modoDestinoPorTipo(tipo) {
-  if (tipo === 'jefe_asignado_trabajo' || tipo === 'trabajo_eliminacion_solicitada') return 'jefe';
+  if (tipo === 'jefe_asignado_trabajo' || tipo === 'trabajo_eliminacion_solicitada' || tipo === 'trabajo_solicitud_aceptada' || tipo === 'trabajo_solicitud_rechazada' || tipo === 'trabajo_finalizado_boss') return 'jefe';
   return 'empleado';
 }
 
