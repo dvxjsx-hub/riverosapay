@@ -5,10 +5,10 @@ const { COOKIE_NAME, createSession, setSessionCookie, clearSessionCookie, readSe
 
 async function registrar(req, res) {
   const { username, password } = req.body || {};
-  const uname = (username || '').trim();
+  const uname = (username || '').trim().toLowerCase();
   const adminId = (process.env.ADMIN_ID || '').trim().toLowerCase();
-  if (!USERNAME_REGEX.test(uname)) return res.status(400).json({ error: 'El usuario debe tener entre 5 y 10 letras minúsculas, sin números ni símbolos.' });
-  if (adminId && uname.toLowerCase() === adminId) return res.status(409).json({ error: 'Ese usuario está reservado.' });
+  if (!USERNAME_REGEX.test(uname)) return res.status(400).json({ error: 'El usuario debe tener entre 3 y 15 letras, sin números ni símbolos.' });
+  if (adminId && uname === adminId) return res.status(409).json({ error: 'Ese usuario está reservado.' });
   if (!PASSWORD_REGEX.test(password || '')) return res.status(400).json({ error: 'La clave debe tener exactamente 6 dígitos.' });
   if (usuarios.existeUsername(uname)) return res.status(409).json({ error: 'Ese usuario ya existe.' });
 
@@ -22,7 +22,7 @@ async function registrar(req, res) {
 
 async function recuperar(req, res) {
   const { username, recoveryCode, newPassword } = req.body || {};
-  const user = usuarios.buscarPorUsername(username);
+  const user = usuarios.buscarPorUsername((username || '').trim().toLowerCase());
   if (!user || !user.recoveryCodeHash || hashRecoveryCode((recoveryCode || '').trim()) !== user.recoveryCodeHash) return res.status(401).json({ error: 'Usuario o código de recuperación incorrectos.' });
   if (!PASSWORD_REGEX.test(newPassword || '')) return res.status(400).json({ error: 'La nueva clave debe tener exactamente 6 dígitos.' });
   user.password = hashPassword(newPassword);
@@ -70,11 +70,8 @@ async function cambiarClave(req, res) {
 
 async function obtenerNuevoCodigoRecuperacion(req, res) {
   const { username, password } = req.body || {};
-  const user = usuarios.buscarPorUsername(username);
+  const user = usuarios.buscarPorUsername((username || '').trim().toLowerCase());
   if (!user || user.id !== req.userId || user.password !== hashPassword(password || '')) return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
-
-  // El código se almacena solo como hash; al solicitar verlo generamos uno nuevo
-  // y el anterior queda invalidado. Así nunca necesitamos guardar el secreto en claro.
   const recoveryCode = newRecoveryCode();
   user.recoveryCodeHash = hashRecoveryCode(recoveryCode);
   await save();
