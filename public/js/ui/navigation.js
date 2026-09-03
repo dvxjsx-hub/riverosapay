@@ -1,84 +1,15 @@
 /* ============================================================
    Riverosapay · NAVEGACION: pantallas, modal, drawer, menu por modo.
    ============================================================ */
-let modalFocusTimer = null;
-
-function showScreen(id) { $all('.screen').forEach(s => s.classList.remove('active')); const screen = $('#' + id); if (screen) screen.classList.add('active'); }
-
-function openModal(title, bodyHtml) {
-  clearTimeout(modalFocusTimer);
-  $('#modal-title').textContent = title;
-  $('#modal-body').innerHTML = bodyHtml;
-  $('#modal-overlay').classList.add('open');
-  $('#modal').classList.add('open');
-  modalFocusTimer = setTimeout(() => {
-    if (!$('#modal').classList.contains('open')) return;
-    const active = document.activeElement;
-    if (active && active !== document.body && active !== document.documentElement) return;
-    const first = $('#modal-body').querySelector('input:not([disabled]), textarea:not([disabled]), select:not([disabled])');
-    if (first) first.focus({ preventScroll: true });
-  }, 80);
-}
-
-function closeModal() {
-  clearTimeout(modalFocusTimer);
-  modalFocusTimer = null;
-  $('#modal-overlay').classList.remove('open');
-  $('#modal').classList.remove('open');
-  if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
-}
-
-function openDrawer() { $('#drawer').classList.add('open'); $('#drawer-overlay').classList.add('open'); }
-function closeDrawer() { $('#drawer').classList.remove('open'); $('#drawer-overlay').classList.remove('open'); }
-
-function prepararDrawerOrganizador() {
-  const drawer = $('#drawer'); if (!drawer || $('#drawer-organizador')) return;
-  const item = document.createElement('button'); item.className = 'drawer-item'; item.id = 'drawer-organizador'; item.innerHTML = `${ICONS.home} Organizador`;
-  const referencia = $('#drawer-amistades') || $('#drawer-notificaciones') || $('#drawer-informacion'); drawer.insertBefore(item, referencia); item.addEventListener('click', abrirOrganizador);
-}
-
-function prepararDrawerAmistades() {
-  const drawer = $('#drawer'); if (!drawer || $('#drawer-amistades')) return;
-  const item = document.createElement('button'); item.className = 'drawer-item'; item.id = 'drawer-amistades'; item.innerHTML = `${ICONS.users || ICONS.plus} Amistades`;
-  const referencia = $('#drawer-notificaciones') || $('#drawer-configuracion') || $('#drawer-informacion'); drawer.insertBefore(item, referencia); item.addEventListener('click', () => { closeDrawer(); openAmistades(); });
-}
-
-function abrirOrganizador() {
-  closeDrawer();
-  if (modoActualUsuario() === 'jefe') {
-    // El BOSS tiene un Organizador propio: sus trabajos y el envío de nuevos trabajos.
-    $('#tabbar').classList.add('hidden');
-    STATE.viewMode = 'jefe-historial';
-    STATE.jefeView = null;
-    if (typeof loadHistorial === 'function') loadHistorial();
-    return;
-  }
-
-  // En EMPLEADO, Trabajo/Estudio/Evento solo aparecen dentro del Organizador.
-  $('#tabbar').classList.remove('hidden');
-  STATE.viewMode = 'empleado';
-  STATE.activeTab = null;
-  $all('.tab').forEach(b => b.classList.remove('active'));
-  $('#content').innerHTML = `<div class="empty-card" style="text-align:center;"><div class="empty-icon">${ICONS.home}</div><h2 style="font-size:20px;margin:6px 0;">Organizador</h2><p class="muted">Selecciona qué quieres organizar.</p><div style="display:grid;gap:10px;margin-top:18px;"><button class="btn-primary" type="button" onclick="seleccionarOrganizador('trabajo')">Trabajo</button><button class="btn-secondary" type="button" onclick="seleccionarOrganizador('estudio')">Estudio</button><button class="btn-secondary" type="button" onclick="seleccionarOrganizador('evento')">Evento</button></div></div>`;
-}
-
-function seleccionarOrganizador(tab) {
-  if (modoActualUsuario() !== 'empleado') return;
-  $('#tabbar').classList.remove('hidden');
-  const btn = document.querySelector(`.tab[data-tab="${tab}"]`); if (!btn) return;
-  $all('.tab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  STATE.activeTab = tab;
-  if (tab === 'trabajo') loadTrabajo(); else if (tab === 'estudio') loadEstudio(); else if (tab === 'evento') loadEventos();
-}
-
-function configurarMenuPorRol() {
-  prepararDrawerOrganizador();
-  prepararDrawerAmistades();
-  $('#drawer-compartir').classList.add('hidden');
-  $('#drawer-verificar').classList.add('hidden');
-  $('#drawer-notificaciones').classList.remove('hidden');
-  $('#drawer-informacion').innerHTML = `${$('#drawer-informacion').querySelector('svg').outerHTML} Información app`;
-  // Siempre arranca en Inicio limpio. Organizador decide cuándo mostrar las secciones.
-  $('#tabbar').classList.add('hidden');
-}
+let modalFocusTimer=null;
+function showScreen(id){$all('.screen').forEach(s=>s.classList.remove('active'));const screen=$('#'+id);if(screen)screen.classList.add('active');}
+function openModal(title,bodyHtml){clearTimeout(modalFocusTimer);$('#modal-title').textContent=title;$('#modal-body').innerHTML=bodyHtml;$('#modal-overlay').classList.add('open');$('#modal').classList.add('open');modalFocusTimer=setTimeout(()=>{if(!$('#modal').classList.contains('open'))return;const active=document.activeElement;if(active&&active!==document.body&&active!==document.documentElement)return;const first=$('#modal-body').querySelector('input:not([disabled]), textarea:not([disabled]), select:not([disabled])');if(first)first.focus({preventScroll:true});},80);}
+function closeModal(){clearTimeout(modalFocusTimer);modalFocusTimer=null;$('#modal-overlay').classList.remove('open');$('#modal').classList.remove('open');if(document.activeElement&&typeof document.activeElement.blur==='function')document.activeElement.blur();}
+function openDrawer(){$('#drawer').classList.add('open');$('#drawer-overlay').classList.add('open');}
+function closeDrawer(){$('#drawer').classList.remove('open');$('#drawer-overlay').classList.remove('open');}
+function prepararDrawerOrganizador(){const drawer=$('#drawer');if(!drawer||$('#drawer-organizador'))return;const item=document.createElement('button');item.className='drawer-item';item.id='drawer-organizador';item.innerHTML=`${ICONS.home} Organizador`;const referencia=$('#drawer-amistades')||$('#drawer-notificaciones')||$('#drawer-informacion');drawer.insertBefore(item,referencia);item.addEventListener('click',abrirOrganizador);}
+function prepararDrawerAmistades(){const drawer=$('#drawer');if(!drawer||$('#drawer-amistades'))return;const item=document.createElement('button');item.className='drawer-item';item.id='drawer-amistades';item.innerHTML=`${ICONS.users||ICONS.plus} Amistades`;const referencia=$('#drawer-notificaciones')||$('#drawer-informacion');drawer.insertBefore(item,referencia);item.addEventListener('click',()=>{closeDrawer();openAmistades();});}
+function prepararDrawerTesoreria(){const drawer=$('#drawer');if(!drawer||$('#drawer-tesoreria'))return;const item=document.createElement('button');item.className='drawer-item hidden';item.id='drawer-tesoreria';item.innerHTML='💰 <span id="drawer-tesoreria-text">Tesorero</span>';const referencia=$('#drawer-informacion');drawer.insertBefore(item,referencia);item.addEventListener('click',()=>{if(modoActualUsuario()==='jefe')abrirTesorero();else abrirAdministrarCapital();});}
+function abrirOrganizador(){closeDrawer();if(modoActualUsuario()==='jefe'){$('#tabbar').classList.add('hidden');STATE.viewMode='jefe-historial';STATE.jefeView=null;if(typeof loadHistorial==='function')loadHistorial();return;}$('#tabbar').classList.remove('hidden');STATE.viewMode='empleado';STATE.activeTab=null;$all('.tab').forEach(b=>b.classList.remove('active'));$('#content').innerHTML=`<div class="empty-card" style="text-align:center;"><div class="empty-icon">${ICONS.home}</div><h2 style="font-size:20px;margin:6px 0;">Organizador</h2><p class="muted">Selecciona qué quieres organizar.</p><div style="display:grid;gap:10px;margin-top:18px;"><button class="btn-primary" type="button" onclick="seleccionarOrganizador('trabajo')">Trabajo</button><button class="btn-secondary" type="button" onclick="seleccionarOrganizador('estudio')">Estudio</button><button class="btn-secondary" type="button" onclick="seleccionarOrganizador('evento')">Evento</button></div></div>`;}
+function seleccionarOrganizador(tab){if(modoActualUsuario()!=='empleado')return;$('#tabbar').classList.remove('hidden');const btn=document.querySelector(`.tab[data-tab="${tab}"]`);if(!btn)return;$all('.tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');STATE.activeTab=tab;if(tab==='trabajo')loadTrabajo();else if(tab==='estudio')loadEstudio();else if(tab==='evento')loadEventos();}
+function configurarMenuPorRol(){prepararDrawerOrganizador();prepararDrawerAmistades();prepararDrawerTesoreria();$('#drawer-compartir').classList.add('hidden');$('#drawer-verificar').classList.add('hidden');$('#drawer-notificaciones').classList.remove('hidden');const tes=$('#drawer-tesoreria');if(tes){tes.classList.remove('hidden');$('#drawer-tesoreria-text').textContent=modoActualUsuario()==='jefe'?'Tesorero':'Administrar capital';}$('#drawer-informacion').innerHTML=`${$('#drawer-informacion').querySelector('svg').outerHTML} Información app`;$tabbar=$('#tabbar');$tabbar.classList.add('hidden');}
