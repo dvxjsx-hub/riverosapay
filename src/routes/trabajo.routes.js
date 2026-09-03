@@ -8,6 +8,8 @@ router.use(requireUser);
 
 router.get('/mis-jefes/:empleadoId', ah(trabajo.obtenerMisJefes));
 router.get('/trabajo/jefe/:jefeId', ah(trabajo.obtenerTrabajosComoJefe));
+router.post('/trabajo/jefe/:jefeId/solicitudes', ah(trabajo.crearSolicitudTrabajo));
+router.post('/trabajo/solicitudes/:solicitudId/responder', ah(trabajo.responderSolicitudTrabajo));
 router.get('/trabajo/:empleadoId', ah(trabajo.obtenerSnapshot));
 router.post('/trabajo/:empleadoId/turnos', ah(trabajo.crearTurno));
 router.patch('/trabajo/turnos/:turnoId', ah(trabajo.actualizarTurno));
