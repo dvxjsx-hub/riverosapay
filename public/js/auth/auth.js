@@ -42,21 +42,41 @@ function configurarCamposClave6() {
   if (login) {
     login.type = 'text';
     login.inputMode = 'numeric';
-    login.pattern = '[0-9]+';
+    login.pattern = '[0-9]{6,12}';
     login.removeAttribute('maxlength');
     login.removeAttribute('minlength');
     login.autocomplete = 'off';
-    login.placeholder = 'Ingresa tu clave';
+    login.placeholder = '6 dígitos';
     if (login.dataset.authDigitsConfigured !== '1') {
       login.dataset.authDigitsConfigured = '1';
-      login.addEventListener('input', () => { login.value = (login.value || '').replace(/\D/g, ''); });
+      login.addEventListener('input', () => {
+        login.value = (login.value || '').replace(/\D/g, '');
+        actualizarVisorLoginClave(login);
+      });
     }
-    if (login.dataset.claveViewer === '1') {
-      const viewer = login.nextElementSibling;
-      if (viewer && viewer.classList.contains('clave6-viewer')) viewer.remove();
-      delete login.dataset.claveViewer;
-    }
+    instalarVisorLoginClave(login);
+    actualizarVisorLoginClave(login);
   }
+}
+
+function instalarVisorLoginClave(campo) {
+  if (!campo || campo.dataset.loginClaveViewer === '1') return;
+  campo.dataset.loginClaveViewer = '1';
+  const wrap = document.createElement('div');
+  wrap.className = 'clave6-viewer';
+  wrap.setAttribute('aria-hidden', 'true');
+  wrap.innerHTML = '<span></span><span></span><span></span><span></span><span></span><span></span>';
+  campo.insertAdjacentElement('afterend', wrap);
+}
+
+function actualizarVisorLoginClave(campo) {
+  const wrap = campo?.nextElementSibling;
+  if (!wrap || !wrap.classList.contains('clave6-viewer')) return;
+  const valor = campo.value || '';
+  [...wrap.children].forEach((slot, i) => {
+    slot.textContent = valor[i] ? '•' : '';
+    slot.classList.toggle('filled', !!valor[i]);
+  });
 }
 
 function initSplash() { setTimeout(goToAuth, 2200); }
