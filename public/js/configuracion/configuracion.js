@@ -7,6 +7,20 @@
   const DARK_STYLE_ID='riverospay-dark-style';
 
   const DARK_CSS=`
+  .settings-panel{display:flex;flex-direction:column;gap:14px;width:100%;}
+  .settings-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 2px;border-bottom:1px solid var(--line);}
+  .settings-copy{display:flex;flex-direction:column;gap:4px;text-align:left;}
+  .settings-copy strong{font-family:var(--font-display);font-size:15px;color:var(--ink);}
+  .settings-copy .muted{font-size:12px;}
+  .settings-hint{margin:0;font-size:12px;line-height:1.45;color:var(--ink-soft);text-align:left;}
+  .theme-switch{position:relative;width:52px;height:30px;display:block;flex:none;cursor:pointer;}
+  .theme-switch input{position:absolute;opacity:0;width:1px;height:1px;}
+  .theme-slider{position:absolute;inset:0;border-radius:999px;background:var(--line);transition:.2s ease;}
+  .theme-slider:before{content:"";position:absolute;width:24px;height:24px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.18);transition:.2s ease;}
+  .theme-switch input:checked + .theme-slider{background:var(--green-600);}
+  .theme-switch input:checked + .theme-slider:before{transform:translateX(22px);}
+  .theme-switch input:focus-visible + .theme-slider{box-shadow:0 0 0 3px var(--green-100);}
+
   :root[data-theme="dark"]{
     --bg:#111613;
     --surface:#1A211D;
@@ -82,7 +96,7 @@
   function aplicarTema(theme){
     const root=document.documentElement;
     const oscuro=theme==='dark';
-    if(oscuro)ensureStyle();
+    ensureStyle();
     root.dataset.theme=oscuro?'dark':'light';
     try{localStorage.setItem(STORAGE_KEY,oscuro?'dark':'light');}catch(_e){}
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content',oscuro?'#0A2416':'#155C31');
