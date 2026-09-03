@@ -5,4 +5,20 @@ function bloquearCambioJefe(req, res, next) {
   next();
 }
 
-module.exports = { bloquearCambioJefe };
+function bloquearTrabajoCongelado(req, res, next) {
+  const turno = req.trabajoTurno;
+  if (turno && turno.congelado === true) {
+    return res.status(409).json({ error: 'Este trabajo está congelado y ya no admite cambios.' });
+  }
+  next();
+}
+
+function bloquearPagoEmpleadoFinalizado(req, res, next) {
+  const turno = req.trabajoTurno;
+  if (turno && turno.finalizado === true) {
+    return res.status(409).json({ error: 'Este trabajo ya finalizó y el empleado no puede editar el pago.' });
+  }
+  next();
+}
+
+module.exports = { bloquearCambioJefe, bloquearTrabajoCongelado, bloquearPagoEmpleadoFinalizado };
