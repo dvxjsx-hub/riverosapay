@@ -1,6 +1,6 @@
-const { db, save } = require('../config/db');
+const { save } = require('../config/db');
 const trabajo = require('../models/trabajo.model');
-const notificaciones = require('./notificaciones.controller');
+const notificaciones = require('../models/notificaciones.model');
 const usuarios = require('../models/usuarios.model');
 
 function usuarioActual(req) { return req.userId || (req.session && req.session.userId) || null; }
