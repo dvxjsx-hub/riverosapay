@@ -114,6 +114,8 @@ function setLoginStep(step, opts) {
   const clave = $('#log-pass');
   if (usuario) usuario.required = !isKey;
   if (clave) clave.required = isKey;
+  const keyLabel = document.querySelector('label[for="log-pass"]');
+  if (keyLabel) keyLabel.textContent = isKey ? `Key · usuario: ${usuario?.value || ''}` : 'Key';
   if (keyStep && back) {
     keyStep.style.position = 'relative';
     keyStep.style.paddingTop = '46px';
