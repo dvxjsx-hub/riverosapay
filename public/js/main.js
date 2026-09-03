@@ -82,7 +82,7 @@ function aplicarUIAuth() {
   const sub = $('#auth-sub');
   if (sub) sub.textContent = '';
   const toggle = $('#auth-toggle');
-  if (toggle) toggle.textContent = 'Crear nueva cuenta';
+  if (toggle) toggle.textContent = 'Iniciar sesión';
   const regUser = $('#reg-user');
   if (regUser) {
     regUser.placeholder = '';
