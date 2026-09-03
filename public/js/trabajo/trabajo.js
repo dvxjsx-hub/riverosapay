@@ -194,6 +194,20 @@ function openTurnoDetail(turnoId) {
     : '';
   const eliminarHtml = !turno.eliminacionPendiente ? `<button class="btn-ghost-danger" style="width:100%;" onclick="pedirConfirmacionEliminar('${turno.id}')">Eliminar trabajo</button>` : `<div class="notice-box">Solicitud de eliminación pendiente.</div>`;
   openModal('Detalle del trabajo', `<div class="detail-row"><span>Lugar</span><span>${escapeHtml(lugar ? lugar.nombre : '—')}</span></div><div class="detail-row"><span>Fecha</span><span>${turno.fecha ? escapeHtml(formatearFechaTrabajo(turno.fecha)) : escapeHtml(turno.dia || '—')}</span></div><div class="detail-row"><span>Hora</span><span>${escapeHtml(turno.horaInicio)} – ${escapeHtml(turno.horaFin)}</span></div><div><p class="muted" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin:0 0 6px;">Descripción</p><p style="margin:0;font-size:14px;">${turno.descripcion ? escapeHtml(turno.descripcion) : 'Sin descripción.'}</p></div>${jefeHtml}${valorHtml}${estadoHtml}${congeladoHtml}${eliminarHtml}`);
+
+  if (!isJefe && trabajoVistaActual === TRABAJO_VISTAS.FINALIZADOS && turno.finalizado !== false) {
+    const valor = $('#f-valor-empleado');
+    const pagado = $('#f-pagado-empleado');
+    if (valor) { valor.disabled = true; valor.title = 'El trabajo ya finalizó.'; }
+    if (pagado) { pagado.disabled = true; }
+    const botones = Array.from(document.querySelectorAll('#modal-body button'));
+    const guardar = botones.find(b => b.textContent.trim() === 'Guardar pago');
+    if (guardar) guardar.disabled = true;
+    const hint = document.createElement('p');
+    hint.className = 'field-hint';
+    hint.textContent = 'El trabajo ya finalizó. El pago ya no puede ser editado por el empleado.';
+    $('#modal-body').appendChild(hint);
+  }
 }
 
 async function guardarPagoEmpleado(turnoId) {
