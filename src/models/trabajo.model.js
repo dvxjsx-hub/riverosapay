@@ -1,8 +1,15 @@
 const { db } = require('../config/db');
 const { getIO } = require('../realtime/io');
 
+function enriquecerTurno(turno) {
+  if (!turno || !turno.jefeAsignadoId) return turno;
+  const jefe = db.users.find(u => u.id === turno.jefeAsignadoId);
+  if (!jefe) return turno;
+  return { ...turno, jefeUsername: jefe.username, jefeNombre: jefe.nombreCompleto || jefe.username };
+}
+
 function snapshot(empleadoId) {
-  const turnos = db.turnos.filter(t => t.empleadoId === empleadoId);
+  const turnos = db.turnos.filter(t => t.empleadoId === empleadoId).map(enriquecerTurno);
   const idsConTurnos = new Set(turnos.map(t => t.lugarId));
   const lugares = db.lugares.filter(l => l.empleadoId === empleadoId && idsConTurnos.has(l.id));
   return { lugares, turnos };
@@ -36,9 +43,7 @@ function marcarFinalizado(id, fecha = new Date().toISOString()) {
 function eliminarTurno(id) {
   const turno = db.turnos.find(t => t.id === id);
   db.turnos = db.turnos.filter(t => t.id !== id);
-  if (turno && !db.turnos.some(t => t.lugarId === turno.lugarId)) {
-    db.lugares = db.lugares.filter(l => l.id !== turno.lugarId);
-  }
+  if (turno && !db.turnos.some(t => t.lugarId === turno.lugarId)) db.lugares = db.lugares.filter(l => l.id !== turno.lugarId);
 }
 
 function misJefes(empleadoId) {
@@ -53,16 +58,11 @@ function empleadosConTrabajosAsignados(jefeId) {
   const ids = [...new Set(db.turnos.filter(t => t.jefeAsignadoId === jefeId).map(t => t.empleadoId))];
   return ids.map(empleadoId => {
     const user = db.users.find(u => u.id === empleadoId);
-    const turnos = db.turnos.filter(t => t.empleadoId === empleadoId && t.jefeAsignadoId === jefeId);
+    const turnos = db.turnos.filter(t => t.empleadoId === empleadoId && t.jefeAsignadoId === jefeId).map(enriquecerTurno);
     const idsLugares = new Set(turnos.map(t => t.lugarId));
     const lugares = db.lugares.filter(l => idsLugares.has(l.id));
     return { empleadoId, empleadoUsername: user ? user.username : 'Empleado', empleadoNombre: user ? (user.nombreCompleto || user.username) : 'Empleado', lugares, turnos };
   });
 }
 
-module.exports = {
-  snapshot, broadcast,
-  buscarOCrearLugar, buscarLugarPorId,
-  buscarTurnoPorId, crearTurno, marcarFinalizado, eliminarTurno,
-  misJefes, tieneTrabajoAsignado, empleadosConTrabajosAsignados
-};
+module.exports = { snapshot, broadcast, buscarOCrearLugar, buscarLugarPorId, buscarTurnoPorId, crearTurno, marcarFinalizado, eliminarTurno, misJefes, tieneTrabajoAsignado, empleadosConTrabajosAsignados };
