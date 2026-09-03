@@ -14,7 +14,7 @@ async function registrar(req, res) {
 
   const recoveryCode = newRecoveryCode();
   const now = new Date().toISOString();
-  const user = { id: newId('u'), username: uname, password: hashPassword(password), role: 'empleado', shareCode: newShareCode(db), modoActual: 'empleado', codigoAmistad: newFriendCode(db), nombreCompleto: null, recoveryCodeHash: hashRecoveryCode(recoveryCode), createdAt: now, lastLoginAt: now };
+  const user = { id: newId('u'), username: uname, password: hashPassword(password), role: 'empleado', shareCode: newShareCode(db), modoActual: 'empleado', codigoAmistad: newFriendCode(db), nombreCompleto: null, esEstudiante: true, recoveryCodeHash: hashRecoveryCode(recoveryCode), createdAt: now, lastLoginAt: now };
   usuarios.crear(user); await save();
   setSessionCookie(res, createSession({ type: 'user', userId: user.id }));
   res.json({ ...usuarios.publicUser(user), recoveryCode });
