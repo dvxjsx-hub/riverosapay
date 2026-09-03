@@ -3,6 +3,8 @@ const { getIO } = require('../realtime/io');
 const usuarios = require('../models/usuarios.model');
 const verificacion = require('../models/verificacion.model');
 const trabajo = require('../models/trabajo.model');
+const estudio = require('../models/estudio.model');
+const evento = require('../models/evento.model');
 const notificaciones = require('../models/notificaciones.model');
 const { newId } = require('../utils/utils');
 
@@ -61,10 +63,29 @@ async function datosEmpleado(req, res) {
   if (!verificacion.tieneAcceso(jefeId, empleadoId) && !trabajo.tieneTrabajoAsignado(jefeId, empleadoId)) return res.status(403).json({ error: 'No tienes acceso a este trabajo.' });
   const empleado = usuarios.buscarPorId(empleadoId);
   const link = verificacion.buscarLink(jefeId, empleadoId);
-  res.json({ empleadoUsername: empleado ? empleado.username : (link && link.empleadoUsername), esEstudiante: empleado ? (empleado.esEstudiante === undefined ? null : empleado.esEstudiante) : null, ...trabajo.snapshot(empleadoId) });
+  res.json({ empleadoUsername: empleado ? empleado.username : (link && link.empleadoUsername), esEstudiante: empleado ? (empleado.esEstudiante === undefined ? null : empleado.esEstudiante) : null, puedeVerAgenda: trabajo.puedeVerAgenda(jefeId, empleadoId), ...trabajo.snapshot(empleadoId) });
 }
 
-async function estudioEmpleado(req, res) { return res.status(403).json({ error: 'El acceso BOSS a Estudio todavía no está habilitado por el empleado.' }); }
-async function eventoEmpleado(req, res) { return res.status(403).json({ error: 'El acceso BOSS a Evento todavía no está habilitado por el empleado.' }); }
+function validarAccesoAgenda(req) {
+  const jefeId = String(req.query.jefeId || '');
+  const actorId = usuarioActual(req);
+  const empleadoId = req.params.empleadoId;
+  if (jefeId !== actorId) return { ok: false, status: 403, error: 'La identidad del BOSS no coincide con la sesión.' };
+  if (!verificacion.tieneAcceso(jefeId, empleadoId) && !trabajo.tieneTrabajoAsignado(jefeId, empleadoId)) return { ok: false, status: 403, error: 'No tienes acceso a este empleado.' };
+  if (!trabajo.puedeVerAgenda(jefeId, empleadoId)) return { ok: false, status: 403, error: 'El empleado no ha permitido que veas sus Académicos y Eventos.' };
+  return { ok: true, jefeId, empleadoId };
+}
+
+async function estudioEmpleado(req, res) {
+  const acceso = validarAccesoAgenda(req);
+  if (!acceso.ok) return res.status(acceso.status).json({ error: acceso.error });
+  res.json({ materias: estudio.materiasDe(acceso.empleadoId), actividades: estudio.actividadesDe(acceso.empleadoId) });
+}
+
+async function eventoEmpleado(req, res) {
+  const acceso = validarAccesoAgenda(req);
+  if (!acceso.ok) return res.status(acceso.status).json({ error: acceso.error });
+  res.json(evento.eventosDe(acceso.empleadoId));
+}
 
 module.exports = { obtenerCodigo, enviarSolicitud, listarNotificaciones, marcarLeidas, solicitudesPendientes, responderSolicitud, historial, datosEmpleado, estudioEmpleado, eventoEmpleado };
