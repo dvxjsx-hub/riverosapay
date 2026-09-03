@@ -4,6 +4,7 @@
 
 const CLAVE_USUARIO_REGEX = /^\d{6}$/;
 const CLAVE_ADMIN_REGEX = /^\d{12}$/;
+const USERNAME_REGEX_FRONT = /^[a-z]{3,15}$/;
 
 function instalarVisorClave6(campo) {
   if (!campo || campo.dataset.claveViewer === '1') return;
@@ -37,10 +38,6 @@ function configurarCamposClave6() {
     instalarVisorClave6(campo);
   });
 
-  // El login es compartido con Admin: NO poner maxlength aquí.
-  // La clave de usuario es numérica, no una contraseña de texto:
-  // mostramos los dígitos directamente y evitamos el comportamiento
-  // visual de password del navegador/teclado móvil.
   const login = $('#log-pass');
   if (login) {
     login.type = 'text';
@@ -50,7 +47,10 @@ function configurarCamposClave6() {
     login.removeAttribute('minlength');
     login.autocomplete = 'off';
     login.placeholder = '6 dígitos';
-    login.addEventListener('input', () => { login.value = (login.value || '').replace(/\D/g, ''); });
+    if (login.dataset.authDigitsConfigured !== '1') {
+      login.dataset.authDigitsConfigured = '1';
+      login.addEventListener('input', () => { login.value = (login.value || '').replace(/\D/g, ''); });
+    }
     if (login.dataset.claveViewer === '1') {
       const viewer = login.nextElementSibling;
       if (viewer && viewer.classList.contains('clave6-viewer')) viewer.remove();
@@ -72,7 +72,6 @@ function goToAuth() {
     setAuthMode('register');
   }
   configurarCamposClave6();
-
   setTimeout(() => {
     const campo = lastUser ? $('#log-pass') : $('#reg-user');
     if (!campo) return;
@@ -91,16 +90,10 @@ function setLoginStep(step, opts) {
   userStep.classList.toggle('active', !isKey);
   keyStep.classList.toggle('active', isKey);
   $('#log-error').textContent = '';
-
-  // Solo el campo visible participa en la validación HTML. Antes, la clave
-  // oculta seguía siendo required y el navegador bloqueaba el submit de
-  // "Verificar" sin llegar al listener de JavaScript.
   const usuario = $('#log-user');
   const clave = $('#log-pass');
   if (usuario) usuario.required = !isKey;
   if (clave) clave.required = isKey;
-
-  // Volver a Usuario siempre queda en la esquina superior izquierda del paso Key.
   if (keyStep && back) {
     keyStep.style.position = 'relative';
     keyStep.style.paddingTop = '46px';
@@ -110,7 +103,6 @@ function setLoginStep(step, opts) {
     back.style.margin = '0';
     back.style.zIndex = '2';
   }
-
   if (opts && opts.noFocus) return;
   setTimeout(() => {
     const campo = isKey ? $('#log-pass') : $('#log-user');
@@ -133,18 +125,12 @@ function setRegisterStep(step, opts) {
   $('#reg-step-pass').classList.toggle('active', step === 'pass');
   $('#reg-step-pass2').classList.toggle('active', step === 'pass2');
   $('#reg-error').textContent = '';
-
-  // Solo el campo visible participa en la validación HTML, igual que en el login.
   $('#reg-user').required = step === 'user';
   $('#reg-pass').required = step === 'pass';
   $('#reg-pass2').required = step === 'pass2';
-
-  // Paso 1 (Usuario): solo flecha "siguiente". Paso 2 (Contraseña): atrás + siguiente.
-  // Paso 3 (Confirmar): solo el botón "Crear cuenta", igual que en el diseño.
   $('#reg-back').classList.toggle('hidden', step !== 'pass');
   $('#reg-next').classList.toggle('hidden', step === 'pass2');
   $('#reg-submit').classList.toggle('hidden', step !== 'pass2');
-
   if (opts && opts.noFocus) return;
   setTimeout(() => {
     const campo = step === 'user' ? $('#reg-user') : step === 'pass' ? $('#reg-pass') : $('#reg-pass2');
@@ -162,10 +148,8 @@ function setAuthMode(mode) {
   $('#form-login').classList.toggle('hidden', !isLogin);
   $('#auth-title').textContent = isLogin ? '¡Bienvenido de nuevo!' : 'CREAR CUENTA';
   $('#auth-sub').textContent = isLogin ? 'Inicia sesión en Riverosapay' : '¡Welcome to Riverosapay!';
-  $('#auth-toggle').textContent = isLogin ? '¿No tienes cuenta? Crear una' : '¿Ya tienes cuenta? Iniciar sesión';
+  $('#auth-toggle').textContent = isLogin ? '¿No tienes cuenta? Crear nueva cuenta' : '¿Ya tienes cuenta? Iniciar sesión';
   $('#auth-toggle').dataset.next = isLogin ? 'register' : 'login';
-  // El toggle y "olvidar dispositivo" quedan dentro del menú de Ayuda (botón HELP),
-  // así el login y el registro muestran solo el botón de ayuda, como en el diseño.
   $('#auth-toggle').classList.add('hidden');
   $('#auth-reset').classList.add('hidden');
   $('#auth-help').classList.remove('hidden');
@@ -178,26 +162,11 @@ function setAuthMode(mode) {
 
 function abrirAyudaLogin() {
   openModal('Ayuda', `
-    <button type="button" class="help-sheet-item" onclick="closeModal(); setAuthMode('login');">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h9"/><path d="M10 12h11m0 0-4-4m4 4-4 4"/></svg>
-      <span>Iniciar sesión</span>
-    </button>
-    <button type="button" class="help-sheet-item" onclick="closeModal(); abrirRecuperarContrasena();">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 5l3 3M13 8l2 2"/></svg>
-      <span>Olvidé mi contraseña</span>
-    </button>
-    <button type="button" class="help-sheet-item" onclick="closeModal(); setAuthMode('register');">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.2" r="4"/><path d="M4 20c0-4.4 4-6.6 8-6.6s8 2.2 8 6.6"/></svg>
-      <span>Crear nueva cuenta</span>
-    </button>
-    <button type="button" class="help-sheet-item" onclick="closeModal(); openInformacion();">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r="0.9" fill="currentColor" stroke="none"/></svg>
-      <span>Información</span>
-    </button>
-    <button type="button" class="help-sheet-item" onclick="closeModal(); $('#auth-reset').click();">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6"/><path d="M20 12a8 8 0 1 1-2.34-5.66L20 10"/></svg>
-      <span>Olvidar este dispositivo</span>
-    </button>
+    <button type="button" class="help-sheet-item" onclick="closeModal(); setAuthMode('login');">Iniciar sesión</button>
+    <button type="button" class="help-sheet-item" onclick="closeModal(); abrirRecuperarContrasena();">Olvidé mi contraseña</button>
+    <button type="button" class="help-sheet-item" onclick="closeModal(); setAuthMode('register');">Crear nueva cuenta</button>
+    <button type="button" class="help-sheet-item" onclick="closeModal(); openInformacion();">Información</button>
+    <button type="button" class="help-sheet-item" onclick="closeModal(); $('#auth-reset').click();">Olvidar este dispositivo</button>
   `);
 }
 
@@ -214,7 +183,6 @@ function cargarModuloAdmin() {
 
 function setupAuth() {
   configurarCamposClave6();
-
   $('#auth-toggle').addEventListener('click', () => setAuthMode($('#auth-toggle').dataset.next));
   $('#auth-reset').addEventListener('click', () => {
     localStorage.removeItem('riverospay_last_user');
@@ -227,31 +195,25 @@ function setupAuth() {
   });
   $('#auth-help').addEventListener('click', abrirAyudaLogin);
   $('#login-step-back').addEventListener('click', () => setLoginStep('user'));
-
-  $('#reg-back').addEventListener('click', () => {
-    setRegisterStep(currentRegisterStep() === 'pass2' ? 'pass' : 'user');
-  });
+  $('#reg-back').addEventListener('click', () => setRegisterStep(currentRegisterStep() === 'pass2' ? 'pass' : 'user'));
 
   $('#form-register').addEventListener('submit', async (e) => {
     e.preventDefault();
     const step = currentRegisterStep(), err = $('#reg-error');
-
     if (step === 'user') {
-      const username = $('#reg-user').value.trim();
-      if (!/^[a-z]{5,10}$/.test(username)) { err.textContent = 'El usuario debe tener de 5 a 10 letras minúsculas, sin números ni símbolos.'; return; }
+      const username = $('#reg-user').value.trim().toLowerCase();
+      $('#reg-user').value = username;
+      if (!USERNAME_REGEX_FRONT.test(username)) { err.textContent = 'El usuario debe tener de 3 a 15 letras, sin números ni símbolos.'; return; }
       setRegisterStep('pass');
       return;
     }
-
     if (step === 'pass') {
       const pass = $('#reg-pass').value;
       if (!CLAVE_USUARIO_REGEX.test(pass)) { err.textContent = 'La clave debe tener exactamente 6 dígitos.'; return; }
       setRegisterStep('pass2');
       return;
     }
-
-    // step === 'pass2': confirmar y crear la cuenta.
-    const username = $('#reg-user').value.trim(), pass = $('#reg-pass').value, pass2 = $('#reg-pass2').value;
+    const username = $('#reg-user').value.trim().toLowerCase(), pass = $('#reg-pass').value, pass2 = $('#reg-pass2').value;
     if (!CLAVE_USUARIO_REGEX.test(pass2)) { err.textContent = 'La clave debe tener exactamente 6 dígitos.'; return; }
     if (pass !== pass2) { err.textContent = 'Las claves no coinciden.'; return; }
     err.textContent = '';
@@ -265,15 +227,13 @@ function setupAuth() {
   $('#form-login').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!$('#login-step-key').classList.contains('active')) {
-      const username = $('#log-user').value.trim();
+      const username = $('#log-user').value.trim().toLowerCase();
       if (!username) { $('#log-user').focus({ preventScroll: true }); return; }
+      $('#log-user').value = username;
       setLoginStep('key');
       return;
     }
-    const username = $('#log-user').value.trim(), pass = $('#log-pass').value, err = $('#log-error');
-    // El login normal usa 6 dígitos y el Admin usa 12. Como ambos comparten
-    // este campo, dejamos pasar únicamente una de esas dos longitudes y el
-    // servidor decide si corresponde al usuario normal o al Admin.
+    const username = $('#log-user').value.trim().toLowerCase(), pass = $('#log-pass').value, err = $('#log-error');
     if (!CLAVE_USUARIO_REGEX.test(pass) && !CLAVE_ADMIN_REGEX.test(pass)) {
       err.textContent = 'La clave debe tener 6 dígitos (usuario) o 12 dígitos (Admin).';
       return;
@@ -315,7 +275,8 @@ function abrirRecuperarContrasena() {
 }
 
 async function enviarRecuperacion() {
-  const username = $('#f-rec-user').value.trim(), recoveryCode = $('#f-rec-code').value.trim(), newPassword = $('#f-rec-pass').value, err = $('#f-rec-error');
+  const username = $('#f-rec-user').value.trim().toLowerCase(), recoveryCode = $('#f-rec-code').value.trim(), newPassword = $('#f-rec-pass').value, err = $('#f-rec-error');
+  if (!USERNAME_REGEX_FRONT.test(username)) { err.textContent = 'El usuario debe tener de 3 a 15 letras.'; return; }
   if (!CLAVE_USUARIO_REGEX.test(newPassword)) { err.textContent = 'La nueva clave debe tener exactamente 6 dígitos.'; return; }
   try {
     await api.post('/api/auth/recuperar', { username, recoveryCode, newPassword });
