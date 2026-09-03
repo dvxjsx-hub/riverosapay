@@ -180,10 +180,18 @@ function openTurnoDetail(turnoId) {
   const jefe = nombreJefePorId(turno.jefeAsignadoId);
   const esPersonal = !turno.jefeAsignadoId;
   const valorActual = turno.valor !== null && turno.valor !== undefined ? turno.valor : '';
+  const finalizado = trabajoEstaFinalizado(turno) || turno.finalizado === true;
 
-  const valorHtml = isJefe
-    ? `<label>Valor del día (opcional)<input id="f-valor" type="number" min="0" step="0.01" value="${valorActual}" placeholder="0.00"></label><button class="btn-secondary" onclick="guardarValor('${turno.id}')">Guardar valor</button>`
-    : `<div class="detail-row"><span>${esPersonal ? 'Trabajo personal' : 'Jefe'}</span><span>${escapeHtml(esPersonal ? 'Sin jefe' : (jefe || 'Jefe asignado'))}</span></div><label>Valor del pago<input id="f-valor-empleado" type="number" min="0" step="0.01" value="${valorActual}" placeholder="0.00"></label><label style="display:flex;align-items:center;gap:10px;cursor:pointer;"><input id="f-pagado-empleado" type="checkbox" ${turno.pagado ? 'checked' : ''}> Marcar como pagado</label><button class="btn-secondary" onclick="guardarPagoEmpleado('${turno.id}')">Guardar pago</button>${esPersonal ? '<p class="field-hint">Este es un trabajo personal. Puedes registrar y llevar aquí tu propio pago.</p>' : '<p class="field-hint">Tu BOSS recibirá una notificación cuando registres o cambies este pago.</p>'}`;
+  let valorHtml;
+  if (isJefe) {
+    valorHtml = `<label>Valor del día (opcional)<input id="f-valor" type="number" min="0" step="0.01" value="${valorActual}" placeholder="0.00"></label><button class="btn-secondary" onclick="guardarValor('${turno.id}')">Guardar valor</button>`;
+  } else if (esPersonal && !finalizado && turno.congelado !== true) {
+    valorHtml = `<div class="detail-row"><span>Trabajo personal</span><span>Sin jefe</span></div><label>Valor del pago<input id="f-valor-empleado" type="number" min="0" step="0.01" value="${valorActual}" placeholder="0.00"></label><label style="display:flex;align-items:center;gap:10px;cursor:pointer;"><input id="f-pagado-empleado" type="checkbox" ${turno.pagado ? 'checked' : ''}> Marcar como pagado</label><button class="btn-secondary" onclick="guardarPagoEmpleado('${turno.id}')">Guardar pago</button><p class="field-hint">Este es un trabajo personal. Puedes registrar y llevar aquí tu propio pago.</p>`;
+  } else if (esPersonal) {
+    valorHtml = `<div class="detail-row"><span>Trabajo personal</span><span>Sin jefe</span></div><div class="detail-row"><span>Pago</span><span>${valorActual === '' ? 'Sin registrar' : dineroCO(valorActual)} · ${turno.pagado ? 'Pagado' : 'No pagado'}</span></div><div class="notice-box">${turno.congelado === true ? 'Trabajo congelado. Ya no admite cambios.' : 'El trabajo ya finalizó. El pago ya no puede ser editado.'}</div>`;
+  } else {
+    valorHtml = `<div class="detail-row"><span>Jefe</span><span>${escapeHtml(jefe || 'Jefe asignado')}</span></div><div class="detail-row"><span>Pago</span><span>${valorActual === '' ? 'Sin registrar' : dineroCO(valorActual)} · ${turno.pagado ? 'Pagado' : 'No pagado'}</span></div><div class="notice-box">Solo el BOSS asignado puede añadir o modificar el pago de este trabajo.</div>`;
+  }
 
   const estadoHtml = isJefe ? `<div class="toggle-pagado"><button class="${!turno.pagado ? 'active no' : ''}" onclick="setPagado('${turno.id}', false)">Día no pagado</button><button class="${turno.pagado ? 'active si' : ''}" onclick="setPagado('${turno.id}', true)">Día pagado</button></div>` : `<div class="detail-row"><span>Estado</span><span>${turno.pagado ? 'Pagado' : 'No pagado'}</span></div>`;
   const jefeHtml = isJefe ? `<div class="detail-row"><span>Jefe</span><span>${escapeHtml(jefe || 'Sin jefe')}</span></div>` : '';
@@ -194,20 +202,6 @@ function openTurnoDetail(turnoId) {
     : '';
   const eliminarHtml = !turno.eliminacionPendiente ? `<button class="btn-ghost-danger" style="width:100%;" onclick="pedirConfirmacionEliminar('${turno.id}')">Eliminar trabajo</button>` : `<div class="notice-box">Solicitud de eliminación pendiente.</div>`;
   openModal('Detalle del trabajo', `<div class="detail-row"><span>Lugar</span><span>${escapeHtml(lugar ? lugar.nombre : '—')}</span></div><div class="detail-row"><span>Fecha</span><span>${turno.fecha ? escapeHtml(formatearFechaTrabajo(turno.fecha)) : escapeHtml(turno.dia || '—')}</span></div><div class="detail-row"><span>Hora</span><span>${escapeHtml(turno.horaInicio)} – ${escapeHtml(turno.horaFin)}</span></div><div><p class="muted" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin:0 0 6px;">Descripción</p><p style="margin:0;font-size:14px;">${turno.descripcion ? escapeHtml(turno.descripcion) : 'Sin descripción.'}</p></div>${jefeHtml}${valorHtml}${estadoHtml}${congeladoHtml}${eliminarHtml}`);
-
-  if (!isJefe && trabajoVistaActual === TRABAJO_VISTAS.FINALIZADOS && turno.finalizado !== false) {
-    const valor = $('#f-valor-empleado');
-    const pagado = $('#f-pagado-empleado');
-    if (valor) { valor.disabled = true; valor.title = 'El trabajo ya finalizó.'; }
-    if (pagado) { pagado.disabled = true; }
-    const botones = Array.from(document.querySelectorAll('#modal-body button'));
-    const guardar = botones.find(b => b.textContent.trim() === 'Guardar pago');
-    if (guardar) guardar.disabled = true;
-    const hint = document.createElement('p');
-    hint.className = 'field-hint';
-    hint.textContent = 'El trabajo ya finalizó. El pago ya no puede ser editado por el empleado.';
-    $('#modal-body').appendChild(hint);
-  }
 }
 
 async function guardarPagoEmpleado(turnoId) {
@@ -267,6 +261,10 @@ async function guardarValor(turnoId) {
    Actualización 5.5 · congelado de trabajos finalizados
    ============================================================ */
 async function congelarTrabajo(turnoId) {
+  openModal('Congelar trabajo', `<p style="margin:0 0 12px;">Esta acción es permanente.</p><p class="muted" style="margin:0;">Después de congelarlo, el trabajo y su pago ya no podrán editarse. No se puede descongelar.</p><div class="notif-actions" style="display:flex;gap:8px;margin-top:16px;"><button class="btn-secondary" type="button" onclick="closeModal()">Cancelar</button><button class="btn-primary" type="button" onclick="confirmarCongelacionTrabajo('${turnoId}')">Sí, congelar trabajo</button></div>`);
+}
+
+async function confirmarCongelacionTrabajo(turnoId) {
   try {
     await api.post(`/api/trabajo/turnos/${turnoId}/congelar`, {});
     toast('Trabajo congelado');
