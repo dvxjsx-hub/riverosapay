@@ -187,8 +187,13 @@ function openTurnoDetail(turnoId) {
 
   const estadoHtml = isJefe ? `<div class="toggle-pagado"><button class="${!turno.pagado ? 'active no' : ''}" onclick="setPagado('${turno.id}', false)">Día no pagado</button><button class="${turno.pagado ? 'active si' : ''}" onclick="setPagado('${turno.id}', true)">Día pagado</button></div>` : `<div class="detail-row"><span>Estado</span><span>${turno.pagado ? 'Pagado' : 'No pagado'}</span></div>`;
   const jefeHtml = isJefe ? `<div class="detail-row"><span>Jefe</span><span>${escapeHtml(jefe || 'Sin jefe')}</span></div>` : '';
+  const congeladoHtml = isJefe && trabajoVistaActual === TRABAJO_VISTAS.FINALIZADOS
+    ? (turno.congelado === true
+      ? `<div class="notice-box">Trabajo congelado. Ya no admite cambios.</div>`
+      : `<button class="btn-secondary" style="width:100%;" onclick="congelarTrabajo('${turno.id}')">Congelar trabajo</button>`)
+    : '';
   const eliminarHtml = !turno.eliminacionPendiente ? `<button class="btn-ghost-danger" style="width:100%;" onclick="pedirConfirmacionEliminar('${turno.id}')">Eliminar trabajo</button>` : `<div class="notice-box">Solicitud de eliminación pendiente.</div>`;
-  openModal('Detalle del trabajo', `<div class="detail-row"><span>Lugar</span><span>${escapeHtml(lugar ? lugar.nombre : '—')}</span></div><div class="detail-row"><span>Fecha</span><span>${turno.fecha ? escapeHtml(formatearFechaTrabajo(turno.fecha)) : escapeHtml(turno.dia || '—')}</span></div><div class="detail-row"><span>Hora</span><span>${escapeHtml(turno.horaInicio)} – ${escapeHtml(turno.horaFin)}</span></div><div><p class="muted" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin:0 0 6px;">Descripción</p><p style="margin:0;font-size:14px;">${turno.descripcion ? escapeHtml(turno.descripcion) : 'Sin descripción.'}</p></div>${jefeHtml}${valorHtml}${estadoHtml}${eliminarHtml}`);
+  openModal('Detalle del trabajo', `<div class="detail-row"><span>Lugar</span><span>${escapeHtml(lugar ? lugar.nombre : '—')}</span></div><div class="detail-row"><span>Fecha</span><span>${turno.fecha ? escapeHtml(formatearFechaTrabajo(turno.fecha)) : escapeHtml(turno.dia || '—')}</span></div><div class="detail-row"><span>Hora</span><span>${escapeHtml(turno.horaInicio)} – ${escapeHtml(turno.horaFin)}</span></div><div><p class="muted" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin:0 0 6px;">Descripción</p><p style="margin:0;font-size:14px;">${turno.descripcion ? escapeHtml(turno.descripcion) : 'Sin descripción.'}</p></div>${jefeHtml}${valorHtml}${estadoHtml}${congeladoHtml}${eliminarHtml}`);
 }
 
 async function guardarPagoEmpleado(turnoId) {
@@ -242,4 +247,16 @@ async function guardarValor(turnoId) {
   const raw = $('#f-valor').value;
   try { await api.patch(`/api/trabajo/turnos/${turnoId}`, { valor: raw === '' ? null : Number(raw) }); toast('Valor guardado'); await refrescarJefeTrabajo(); openTurnoDetail(turnoId); }
   catch (ex) { toast(ex.message); }
+}
+
+/* ============================================================
+   Actualización 5.5 · congelado de trabajos finalizados
+   ============================================================ */
+async function congelarTrabajo(turnoId) {
+  try {
+    await api.post(`/api/trabajo/turnos/${turnoId}/congelar`, {});
+    toast('Trabajo congelado');
+    await refrescarJefeTrabajo();
+    openTurnoDetail(turnoId);
+  } catch (ex) { toast(ex.message); }
 }
