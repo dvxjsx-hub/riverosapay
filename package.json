@@ -5,7 +5,8 @@
   "description": "Prototipo de organización personal y laboral, conexión JEFE/EMPLEADO para que un JEFE pueda agendar y organizar trabajos a sus empleados de forma simple",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test tests/*.test.js"
   },
   "engines": {
     "node": "20.x"
