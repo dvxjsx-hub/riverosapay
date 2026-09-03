@@ -88,7 +88,7 @@
         await api.post(`/api/trabajo/${targetEmpleadoId()}/turnos`, {
           lugar, fecha,
           dia: new Intl.DateTimeFormat('es-CO', { weekday: 'long' }).format(new Date(`${fecha}T12:00:00`)),
-          horaInicio: hi, horaFin: hf, descripcion,
+          horaInicio: hi, horaFin: hf, descripcion: desc,
           jefeAsignadoId: selectJefe ? (selectJefe.value || null) : null,
           puedeVerAgendaJefe: permiso,
           actorJefeId: esJefe ? STATE.user.id : undefined,
