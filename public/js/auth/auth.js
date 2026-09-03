@@ -275,8 +275,21 @@ function setupAuth() {
 
 function afterAuth(user) { STATE.user = user; STATE.onboardingPending = false; setupSocket(); proceedAfterLogin(); }
 function proceedAfterLogin() {
-  if (STATE.onboardingPending) { STATE.onboardingPending = false; mostrarEresEstudiante(); return; }
+  if (STATE.onboardingPending) {
+    STATE.onboardingPending = false;
+    mostrarBienvenidaRegistro();
+    return;
+  }
   enterApp();
+}
+
+function mostrarBienvenidaRegistro() {
+  $('#nombre-content').innerHTML = `
+    <h1>Bienvenido, puedes establecer un nombre diferente en configuración y desactivar la sesión académica desde el menú de configuración.</h1>
+    <button class="btn-primary" id="registro-bienvenida-continuar" style="margin-top:18px;">Continuar</button>
+  `;
+  showScreen('screen-nombre');
+  $('#registro-bienvenida-continuar').addEventListener('click', enterApp);
 }
 
 function mostrarCodigoRecuperacion(code) {
