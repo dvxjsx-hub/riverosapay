@@ -1,47 +1,158 @@
 # riverosapay
 
-App de organización personal/laboral para administrar mejor la relación **JEFE / EMPLEADO** en el trabajo. Prototipo en desarrollo activo — la versión 1.0 llega cuando el creador diga "LISTO".
+Aplicación de organización personal y laboral para administrar la relación **BOSS / EMPLEADO**. Está pensada principalmente para uso móvil y funciona como PWA.
 
-## Qué resuelve
+## Qué es Riverosapay
 
-Un EMPLEADO organiza sus turnos de trabajo, su horario de estudio y sus eventos. Un JEFE, una vez verificado por ese empleado, puede ver esa información en tiempo real y hasta cargarle trabajos directamente. Todo sin que compartan más datos que un código de verificación de 8 dígitos.
+Riverosapay separa claramente el **Inicio** del **Organizador**.
 
-## Lógica de la app
+- **Inicio:** es una pantalla limpia de bienvenida. No muestra Trabajo, Estudio, Evento ni información del organizador.
+- **Organizador:** es el espacio donde se gestionan las funciones de la cuenta.
+- **Amistades:** permite conectar cuentas y sirve como base para las relaciones laborales.
+- **Notificaciones:** concentra las solicitudes y avisos correspondientes al modo actual.
 
-**Roles.** Cada cuenta elige un único rol al registrarse, EMPLEADO o JEFE, y no puede cambiarlo después. El rol determina qué puede ver y editar: el EMPLEADO es dueño de sus datos (trabajo, estudio, evento); el JEFE solo accede a los datos de un empleado después de que ese empleado acepta su solicitud.
+## Modos
 
-**Verificación (link JEFE↔EMPLEADO).** Cada EMPLEADO tiene un `shareCode` único de 8 dígitos. El JEFE lo ingresa y se crea una solicitud (`joinRequest`) pendiente. El EMPLEADO la acepta o rechaza; al aceptarla se crea un `link` permanente entre ambos. A partir de ahí, cualquier endpoint que el JEFE use para ver datos de ese EMPLEADO valida que ese `link` exista (`tieneAcceso`) antes de responder — sin ese link, el JEFE recibe 403.
+Cada cuenta tiene un rol y un `modoActual`.
 
-**Tiempo real.** Cada EMPLEADO tiene su propia "sala" de Socket.IO (`emp-<id>`). Cuando algo cambia (un turno, una materia, un evento), el servidor emite el estado actualizado a esa sala. El EMPLEADO siempre está en su propia sala; el JEFE se une a la sala de un empleado solo si ya fue verificado, así que ambos ven los cambios al instante sin recargar.
+### Modo EMPLEADO
 
-**Trabajo (turnos).** Un turno tiene lugar, día, horario, y opcionalmente queda asignado a un JEFE específico. Si lo crea el JEFE, queda asignado a él automáticamente; si lo crea el EMPLEADO, puede elegir a qué jefe (ya verificado) asignarlo o dejarlo sin asignar. Marcar "pagado" y el valor del día lo hace principalmente el JEFE cuando está verificando. Borrar un turno sigue reglas distintas según quién lo pide y si está pagado (ver `PROYECTO.txt` para el detalle paso a paso).
+El empleado utiliza el Organizador para gestionar:
 
-**Notificaciones.** Hay dos tipos que conviven en una sola lista para el EMPLEADO: las solicitudes de verificación pendientes/rechazadas, y notificaciones de info (trabajo añadido, pagado, eliminado, jefe configurado). Todo se ordena por fecha.
+- Trabajo y turnos.
+- Estudio, cuando la cuenta está configurada como estudiante.
+- Eventos.
 
-**Persistencia.** El estado completo de la app (usuarios, turnos, materias, eventos, links, solicitudes, notificaciones) vive en un único objeto en memoria que se reescribe entero en cada `save()`, ya sea hacia MongoDB Atlas o hacia un archivo JSON local, según la tecnología usada (más abajo).
+Trabajo, Estudio y Evento no aparecen directamente en Inicio; solo se muestran dentro del Organizador.
+
+El empleado es propietario de sus datos. Puede tener amistades, asignar un BOSS a determinados trabajos y recibir solicitudes de trabajos creados por un BOSS.
+
+### Modo BOSS
+
+El BOSS tiene un Organizador propio para administrar su actividad laboral.
+
+Puede:
+
+- Consultar los trabajos que tiene asignados.
+- Crear un trabajo desde su propio Organizador.
+- Seleccionar una de sus amistades como destinatario del trabajo.
+- Enviar el trabajo como una solicitud.
+- Recibir en Notificaciones el resultado de la solicitud.
+
+Cuando un BOSS envía un trabajo, **todavía no se crea como trabajo del empleado**. Primero queda como solicitud pendiente. El empleado recibe una notificación con la información del trabajo y puede:
+
+- **Aceptar:** el trabajo se crea en sus trabajos, queda asociado al BOSS que lo envió y el nombre del BOSS queda disponible en la información del trabajo.
+- **Rechazar:** la solicitud se cierra y el trabajo no se añade a los trabajos del empleado.
+
+El envío solo puede hacerse hacia una cuenta que sea amistad del BOSS.
+
+## Amistades y relación laboral
+
+Las amistades son bidireccionales. Una vez aceptada una solicitud de amistad, ambas cuentas quedan relacionadas.
+
+La relación BOSS ↔ EMPLEADO utilizada para consultar información laboral funciona mediante solicitudes de verificación y `links`. El empleado decide si acepta o rechaza el acceso. Los endpoints protegidos comprueban en backend que exista la relación correspondiente antes de entregar información.
+
+La amistad también se utiliza para permitir que un BOSS envíe trabajos directamente a una persona concreta sin crear el trabajo de forma inmediata.
+
+## Trabajo
+
+Un trabajo/turno contiene, entre otros datos:
+
+- Lugar.
+- Fecha y día.
+- Hora de inicio y finalización.
+- Descripción opcional.
+- Estado de pago.
+- Valor del día.
+- BOSS asignado.
+- Estado de finalización.
+- Estado de eliminación pendiente.
+
+El empleado puede crear trabajos para sí mismo y, cuando corresponde, asignarlos a una amistad BOSS.
+
+Un BOSS puede crear un trabajo desde su Organizador y enviarlo a una amistad. La aceptación del destinatario es necesaria para que el turno pase a formar parte de sus trabajos.
+
+Los trabajos tienen vistas de **Horarios** y **Finalizados**, además de filtros relacionados con BOSS y estado de pago. Las reglas de edición, pago, finalización y eliminación se validan en backend según el propietario o BOSS asignado.
+
+## Notificaciones
+
+Las notificaciones pertenecen a la cuenta, pero se separan por `modoDestino` para evitar mezclar acciones de EMPLEADO y BOSS.
+
+Entre los eventos gestionados están:
+
+- Solicitudes de amistad.
+- Resultados de solicitudes de amistad.
+- Solicitudes de verificación.
+- Trabajos asignados.
+- Solicitudes de nuevos trabajos enviadas por un BOSS.
+- Aceptación o rechazo de trabajos enviados por un BOSS.
+- Trabajos pagados.
+- Trabajos finalizados.
+- Eliminaciones y solicitudes de eliminación.
+
+Las actualizaciones de notificaciones se transmiten también mediante Socket.IO cuando la cuenta está conectada.
+
+## Tiempo real
+
+Cada empleado dispone de una sala de Socket.IO (`emp-<id>`). Los BOSS disponen de su sala (`jefe-<id>`).
+
+El servidor autentica la conexión Socket.IO mediante la sesión del usuario. Un BOSS solo puede entrar a la sala de un empleado cuando el backend confirma que tiene acceso laboral válido.
+
+Los cambios de Trabajo, Estudio, Evento y Notificaciones pueden reflejarse sin recargar la aplicación.
+
+## Verificación BOSS ↔ EMPLEADO
+
+Cada empleado tiene un código de verificación de 8 dígitos. El flujo de verificación crea una solicitud pendiente y el empleado decide si concede el acceso.
+
+Al aceptar se crea un vínculo permanente entre BOSS y empleado. La consulta de información ajena no depende únicamente de la interfaz: el backend vuelve a comprobar los permisos.
+
+## Persistencia
+
+El estado de la aplicación se maneja mediante un objeto de datos central que contiene usuarios, amistades, solicitudes, trabajos, lugares, estudio, eventos, vínculos y notificaciones.
+
+La capa de persistencia puede utilizar MongoDB Atlas o un archivo JSON local como respaldo de desarrollo, según la configuración disponible.
 
 ## Tecnologías
 
 - **Backend:** Node.js + Express + Socket.IO.
-- **Persistencia:** MongoDB Atlas (capa gratuita) cuando está configurada; si no, se guarda en un archivo JSON local en el propio servidor. Esto existe puntualmente porque Render, en su plan gratuito, apaga el servicio por inactividad y puede perder el archivo local al reiniciarse — MongoDB Atlas resuelve eso guardando la info fuera del servidor.
-- **Frontend:** HTML/CSS/JS puro, sin frameworks. Pensado 100% para uso desde el celular (PWA con modo standalone).
-- **Hosting:** Render (capa gratuita), por ahora.
+- **Persistencia:** MongoDB Atlas o archivo JSON local.
+- **Frontend:** HTML, CSS y JavaScript sin framework.
+- **Aplicación móvil:** PWA con modo standalone.
+- **Comunicación en tiempo real:** Socket.IO.
 
 ## Estructura del proyecto
 
-```
+```text
 riverosapay/
-├── server.js              # arranca Express + Socket.IO, monta las rutas
+├── server.js
 ├── src/
-│   ├── config/db.js       # persistencia (Mongo Atlas / archivo local)
-│   ├── utils/utils.js     # hashing, ids, códigos de usuario/recuperación
-│   ├── realtime/io.js     # referencia compartida a la instancia de Socket.IO
-│   ├── models/            # acceso a datos por dominio (usuarios, trabajo, estudio, evento, verificación, notificaciones)
-│   ├── controllers/       # lógica de cada endpoint
-│   ├── routes/            # solo define las rutas y las conecta a los controllers
-│   ├── sockets/            # eventos de Socket.IO (salas por empleado/jefe)
-│   └── middleware/        # manejo de errores async
-└── public/                # frontend, ya modularizado por sección (auth, trabajo, estudio, eventos, jefe, perfil, notificaciones...)
+│   ├── config/             # persistencia
+│   ├── utils/              # hashing, IDs y códigos
+│   ├── realtime/           # instancia compartida de Socket.IO
+│   ├── models/             # usuarios, amistades, trabajo, solicitudes, etc.
+│   ├── controllers/        # lógica de negocio y endpoints
+│   ├── routes/             # definición de rutas
+│   ├── sockets/            # autenticación y salas de tiempo real
+│   └── middleware/         # middleware de sesión y manejo async
+└── public/
+    ├── css/
+    ├── img/
+    ├── js/
+    │   ├── admin/
+    │   ├── amistades/
+    │   ├── auth/
+    │   ├── core/
+    │   ├── estudio/
+    │   ├── eventos/
+    │   ├── home/
+    │   ├── jefe/
+    │   ├── notificaciones/
+    │   ├── perfil/
+    │   ├── socket/
+    │   ├── trabajo/
+    │   └── ui/
+    ├── index.html
+    └── manifest.json
 ```
 
-Cada dominio (trabajo, estudio, evento, verificación) tiene su propio modelo, controller y archivo de rutas, así se puede seguir agregando funcionalidad sin que un solo archivo crezca sin control.
+La aplicación está organizada por dominios para que Trabajo, Estudio, Evento, Amistades, Notificaciones, autenticación y funciones BOSS puedan evolucionar de forma independiente sin concentrar toda la lógica en un único archivo.
