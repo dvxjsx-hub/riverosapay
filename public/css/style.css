@@ -131,6 +131,55 @@ input,textarea,select{font-family:inherit;}
 .link-btn{margin-top:18px;background:none;border:none;color:var(--green-700);font-size:13.5px;font-weight:600;cursor:pointer;padding:6px;}
 .link-btn.ghost{margin-top:2px;color:var(--ink-soft);font-weight:500;font-size:12.5px;text-decoration:underline;}
 
+/* ============ LOGIN (paso a paso: Usuario -> Key) ============ */
+.auth-form .login-step{display:none;flex-direction:column;align-items:center;gap:14px;width:100%;}
+.auth-form .login-step.active{display:flex;}
+.auth-form .login-step-label{
+  display:block;width:100%;text-align:center;text-transform:uppercase;letter-spacing:.1em;
+  font-size:12px;font-weight:700;color:var(--ink-soft);margin:2px 0 0;
+}
+.auth-form .login-step input{
+  border:none;border-bottom:1.5px solid var(--line);border-radius:0;background:transparent;
+  padding:10px 4px;font-size:16px;text-align:center;color:var(--ink);width:100%;outline:none;
+  transition:border-color .15s ease;
+}
+.auth-form .login-step input:focus{border-color:var(--green-600);box-shadow:none;}
+.login-step-back{
+  align-self:flex-start;display:flex;align-items:center;gap:5px;background:none;border:none;
+  color:var(--green-700);font-family:var(--font-display);font-weight:600;font-size:13px;
+  cursor:pointer;padding:2px 0;margin:-4px 0 -2px;
+}
+.login-step-back svg{width:16px;height:16px;}
+
+/* clave (KEY) mostrada como 6 segmentos, en vez del input en crudo */
+.clave6-wrap{position:relative;width:100%;height:46px;}
+.auth-form .login-step .clave6-wrap input{
+  position:absolute;inset:0;width:100%;height:100%;letter-spacing:10px;color:transparent;
+  caret-color:var(--green-700);text-align:center;border-bottom:none;padding:0;
+}
+.auth-form .login-step .clave6-wrap input::placeholder{color:transparent;}
+.clave6-wrap .clave6-viewer{display:flex;gap:8px;width:100%;height:100%;pointer-events:none;}
+.clave6-wrap .clave6-viewer span{
+  flex:1;border-bottom:2px solid var(--line);display:flex;align-items:flex-end;justify-content:center;
+  padding-bottom:8px;font-size:22px;font-weight:800;color:var(--green-900);transition:border-color .15s ease;
+}
+.clave6-wrap .clave6-viewer span.filled{border-color:var(--green-600);}
+
+.help-btn{
+  display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;
+  color:var(--green-700);cursor:pointer;margin-top:24px;padding:6px;
+  font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+}
+.help-btn svg{width:25px;height:25px;}
+
+.help-sheet-item{
+  display:flex;align-items:center;gap:14px;width:100%;background:none;border:none;
+  padding:14px 2px;font-size:14.5px;color:var(--ink);text-align:left;cursor:pointer;
+  border-bottom:1px solid var(--line);font-family:inherit;
+}
+.help-sheet-item:last-child{border-bottom:none;}
+.help-sheet-item svg{width:20px;height:20px;color:var(--green-700);flex:none;}
+
 /* ============ ELECCIÓN SÍ/NO (onboarding) ============ */
 .choice-row{display:flex;gap:10px;width:100%;}
 .choice-row .btn-primary,.choice-row .btn-secondary{margin-top:0;}
