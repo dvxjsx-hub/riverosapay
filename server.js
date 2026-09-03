@@ -26,6 +26,11 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Health check público para comprobar que la aplicación está viva.
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, app: 'riverosapay' });
+});
+
 // Autenticación pública y administración tienen sus propios controles.
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
