@@ -49,6 +49,7 @@ function configurarCamposClave6() {
     login.removeAttribute('minlength');
     login.autocomplete = 'off';
     login.placeholder = '6 dígitos';
+    login.addEventListener('input', () => { login.value = (login.value || '').replace(/\D/g, ''); });
     if (login.dataset.claveViewer === '1') {
       const viewer = login.nextElementSibling;
       if (viewer && viewer.classList.contains('clave6-viewer')) viewer.remove();
@@ -71,7 +72,6 @@ function goToAuth() {
   }
   configurarCamposClave6();
 
-  // No robar el foco al usuario durante la transición a login/registro.
   setTimeout(() => {
     const campo = lastUser ? $('#log-pass') : $('#reg-user');
     if (!campo) return;
@@ -82,20 +82,33 @@ function goToAuth() {
   }, 80);
 }
 
-// Alterna entre el paso "Usuario" y el paso "Key" dentro del login.
 function setLoginStep(step, opts) {
   const isKey = step === 'key';
-  $('#login-step-user').classList.toggle('active', !isKey);
-  $('#login-step-key').classList.toggle('active', isKey);
+  const userStep = $('#login-step-user');
+  const keyStep = $('#login-step-key');
+  const back = $('#login-step-back');
+  userStep.classList.toggle('active', !isKey);
+  keyStep.classList.toggle('active', isKey);
   $('#log-error').textContent = '';
 
-  // IMPORTANTE: un input required que está en el paso oculto puede impedir
-  // que el submit del primer paso llegue a JavaScript. Solo el campo visible
-  // debe participar en la validación HTML.
+  // Solo el campo visible participa en la validación HTML. Antes, la clave
+  // oculta seguía siendo required y el navegador bloqueaba el submit de
+  // "Verificar" sin llegar al listener de JavaScript.
   const usuario = $('#log-user');
   const clave = $('#log-pass');
   if (usuario) usuario.required = !isKey;
   if (clave) clave.required = isKey;
+
+  // Volver a Usuario siempre queda en la esquina superior izquierda del paso Key.
+  if (keyStep && back) {
+    keyStep.style.position = 'relative';
+    keyStep.style.paddingTop = '46px';
+    back.style.position = 'absolute';
+    back.style.top = '0';
+    back.style.left = '0';
+    back.style.margin = '0';
+    back.style.zIndex = '2';
+  }
 
   if (opts && opts.noFocus) return;
   setTimeout(() => {
@@ -189,7 +202,6 @@ function setupAuth() {
 
   $('#form-login').addEventListener('submit', async (e) => {
     e.preventDefault();
-    // Paso 1 (Usuario): el botón "Verificar" solo avanza al paso Key, no inicia sesión todavía.
     if (!$('#login-step-key').classList.contains('active')) {
       const username = $('#log-user').value.trim();
       if (!username) { $('#log-user').focus({ preventScroll: true }); return; }
