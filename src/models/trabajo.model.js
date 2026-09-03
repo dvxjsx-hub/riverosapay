@@ -54,6 +54,10 @@ function tieneTrabajoAsignado(jefeId, empleadoId) {
   return db.turnos.some(t => t.empleadoId === empleadoId && t.jefeAsignadoId === jefeId);
 }
 
+function puedeVerAgenda(jefeId, empleadoId) {
+  return db.turnos.some(t => t.empleadoId === empleadoId && t.jefeAsignadoId === jefeId && t.puedeVerAgendaJefe === true);
+}
+
 function empleadosConTrabajosAsignados(jefeId) {
   const ids = [...new Set(db.turnos.filter(t => t.jefeAsignadoId === jefeId).map(t => t.empleadoId))];
   return ids.map(empleadoId => {
@@ -61,8 +65,15 @@ function empleadosConTrabajosAsignados(jefeId) {
     const turnos = db.turnos.filter(t => t.empleadoId === empleadoId && t.jefeAsignadoId === jefeId).map(enriquecerTurno);
     const idsLugares = new Set(turnos.map(t => t.lugarId));
     const lugares = db.lugares.filter(l => idsLugares.has(l.id));
-    return { empleadoId, empleadoUsername: user ? user.username : 'Empleado', empleadoNombre: user ? (user.nombreCompleto || user.username) : 'Empleado', lugares, turnos };
+    return {
+      empleadoId,
+      empleadoUsername: user ? user.username : 'Empleado',
+      empleadoNombre: user ? (user.nombreCompleto || user.username) : 'Empleado',
+      puedeVerAgenda: puedeVerAgenda(jefeId, empleadoId),
+      lugares,
+      turnos
+    };
   });
 }
 
-module.exports = { snapshot, broadcast, buscarOCrearLugar, buscarLugarPorId, buscarTurnoPorId, crearTurno, marcarFinalizado, eliminarTurno, misJefes, tieneTrabajoAsignado, empleadosConTrabajosAsignados };
+module.exports = { snapshot, broadcast, buscarOCrearLugar, buscarLugarPorId, buscarTurnoPorId, crearTurno, marcarFinalizado, eliminarTurno, misJefes, tieneTrabajoAsignado, puedeVerAgenda, empleadosConTrabajosAsignados };
