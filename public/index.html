@@ -59,19 +59,32 @@
       </form>
 
       <form id="form-login" class="auth-form hidden">
-        <label>Usuario
+        <div class="login-step active" id="login-step-user">
+          <label class="login-step-label" for="log-user">Usuario</label>
           <input id="log-user" type="text" autocomplete="username" required>
-        </label>
-        <label>Contraseña
-          <input id="log-pass" type="password" autocomplete="current-password" required>
-        </label>
-        <p class="field-error" id="log-error"></p>
-        <button type="submit" class="btn-primary">Iniciar sesión</button>
-        <button id="auth-olvide" class="link-btn" type="button">¿Olvidaste tu contraseña?</button>
+          <button type="submit" class="btn-primary">Verificar</button>
+        </div>
+
+        <div class="login-step" id="login-step-key">
+          <button type="button" id="login-step-back" class="login-step-back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+            <span>Usuario</span>
+          </button>
+          <label class="login-step-label" for="log-pass">Key</label>
+          <div class="clave6-wrap">
+            <input id="log-pass" type="password" autocomplete="current-password" required>
+          </div>
+          <p class="field-error" id="log-error"></p>
+          <button type="submit" class="btn-primary">Verificar</button>
+        </div>
       </form>
 
       <button id="auth-toggle" class="link-btn" type="button"></button>
       <button id="auth-reset" class="link-btn ghost" type="button">Olvidar este dispositivo</button>
+      <button id="auth-help" class="help-btn hidden" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.5 2.5 0 0 1 4.8 1c0 1.6-2.3 1.9-2.3 3.4"/><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg>
+        <span>Ayuda</span>
+      </button>
     </div>
   </section>
 
