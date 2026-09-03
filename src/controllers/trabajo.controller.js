@@ -31,7 +31,7 @@ async function obtenerTrabajosComoJefe(req, res) {
 async function crearTurno(req, res) {
   const actorId = usuarioActual(req);
   const empleadoId = req.params.empleadoId;
-  const { lugar, fecha, dia, horaInicio, horaFin, descripcion, jefeAsignadoId, actorJefeId, actorJefeUsername } = req.body || {};
+  const { lugar, fecha, dia, horaInicio, horaFin, descripcion, jefeAsignadoId, actorJefeId, actorJefeUsername, puedeVerAgendaJefe } = req.body || {};
   const nombreLugar = (lugar || '').trim();
   if (!nombreLugar || !fecha || !horaInicio || !horaFin) return res.status(400).json({ error: 'Faltan datos del trabajo (lugar, fecha u hora).' });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return res.status(400).json({ error: 'La fecha del trabajo no es válida.' });
@@ -45,9 +45,10 @@ async function crearTurno(req, res) {
 
   const asignado = creandoComoBoss ? actorId : (jefeAsignadoId || null);
   if (asignado && asignado !== empleadoId && !amistades.existe(empleadoId, asignado)) return res.status(400).json({ error: 'El BOSS seleccionado debe ser una de tus amistades.' });
+  const permisoAgenda = Boolean(!creandoComoBoss && asignado && puedeVerAgendaJefe === true);
 
   const lug = trabajo.buscarOCrearLugar(empleadoId, nombreLugar);
-  const turno = { id: newId('trn'), empleadoId, lugarId: lug.id, fecha, dia: dia || '', horaInicio, horaFin, descripcion: (descripcion || '').trim(), pagado: false, valor: null, jefeAsignadoId: asignado, eliminacionPendiente: false, finalizado: false, finalizadoAt: null };
+  const turno = { id: newId('trn'), empleadoId, lugarId: lug.id, fecha, dia: dia || '', horaInicio, horaFin, descripcion: (descripcion || '').trim(), pagado: false, valor: null, jefeAsignadoId: asignado, puedeVerAgendaJefe: permisoAgenda, eliminacionPendiente: false, finalizado: false, finalizadoAt: null };
   trabajo.crearTurno(turno);
   await save();
   trabajo.broadcast(empleadoId);
@@ -120,7 +121,7 @@ async function responderSolicitudTrabajo(req, res) {
     turno = {
       id: newId('trn'), empleadoId, lugarId: lug.id, fecha: solicitud.fecha, dia: solicitud.dia || '',
       horaInicio: solicitud.horaInicio, horaFin: solicitud.horaFin, descripcion: solicitud.descripcion || '',
-      pagado: false, valor: null, jefeAsignadoId: solicitud.jefeId,
+      pagado: false, valor: null, jefeAsignadoId: solicitud.jefeId, puedeVerAgendaJefe: false,
       eliminacionPendiente: false, finalizado: false, finalizadoAt: null
     };
     trabajo.crearTurno(turno);
@@ -179,6 +180,20 @@ async function actualizarTurno(req, res) {
     await notificaciones.crearParaUsuario(turno.jefeAsignadoId, 'jefe_asignado_trabajo', { empleadoUsername: empleado ? empleado.username : '', empleadoNombre: empleado ? (empleado.nombreCompleto || empleado.username) : '', lugar: lug ? lug.nombre : '', fechaTrabajo: turno.fecha || '' });
   }
   res.json(turno);
+}
+
+async function actualizarPermisoAgenda(req, res) {
+  const turno = trabajo.buscarTurnoPorId(req.params.turnoId);
+  if (!turno) return res.status(404).json({ error: 'Trabajo no encontrado.' });
+  const actorId = usuarioActual(req);
+  if (actorId !== turno.empleadoId) return res.status(403).json({ error: 'Solo el empleado propietario puede cambiar este permiso.' });
+  if (!turno.jefeAsignadoId) return res.status(400).json({ error: 'Este trabajo no tiene un BOSS asignado.' });
+  if (turno.congelado === true) return res.status(409).json({ error: 'Este trabajo está congelado y ya no admite cambios.' });
+  if (typeof req.body?.puedeVerAgendaJefe !== 'boolean') return res.status(400).json({ error: 'El permiso de agenda no es válido.' });
+  turno.puedeVerAgendaJefe = req.body.puedeVerAgendaJefe;
+  await save();
+  trabajo.broadcast(turno.empleadoId);
+  res.json({ ok: true, turno });
 }
 
 async function finalizarTurno(req, res) {
@@ -244,4 +259,4 @@ async function rechazarEliminacion(req, res) {
   turno.eliminacionPendiente = false; await save(); trabajo.broadcast(turno.empleadoId); await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_eliminacion_rechazada', { jefeUsername: req.body.jefeUsername || 'Tu BOSS' }); res.json({ eliminado: false });
 }
 
-module.exports = { obtenerSnapshot, obtenerMisJefes, obtenerTrabajosComoJefe, crearTurno, crearSolicitudTrabajo, responderSolicitudTrabajo, actualizarTurno, finalizarTurno, eliminarTurno, confirmarEliminacion, rechazarEliminacion };
+module.exports = { obtenerSnapshot, obtenerMisJefes, obtenerTrabajosComoJefe, crearTurno, crearSolicitudTrabajo, responderSolicitudTrabajo, actualizarTurno, actualizarPermisoAgenda, finalizarTurno, eliminarTurno, confirmarEliminacion, rechazarEliminacion };
