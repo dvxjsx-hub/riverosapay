@@ -21,7 +21,7 @@ async function listar(req, res) {
   asegurarCodigoAmistad(user);
   const lista = amistades.amistadesDe(user.id).map(a => {
     const amigo = usuarios.buscarPorId(a.amistadId);
-    return { id: a.amistadId, username: a.amistadUsername, nombreCompleto: amigo ? (amigo.nombreCompleto || null) : null, fecha: a.fecha };
+    return { id: a.amistadId, username: a.amistadUsername, nombreCompleto: amigo ? (amigo.nombreCompleto || null) : null, verificada: amigo ? amigo.verificada === true : false, fecha: a.fecha };
   });
   const solicitudes = amistades.solicitudesRecibidas(user.id).map(publicSolicitud);
   await save();
