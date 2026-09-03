@@ -44,33 +44,19 @@
           <label class="login-step-label" for="reg-user">Usuario</label>
           <input id="reg-user" type="text" placeholder="Eje. riverojs" autocomplete="username" maxlength="10" required>
         </div>
-
         <div class="login-step" id="reg-step-pass">
           <label class="login-step-label" for="reg-pass">Contraseña</label>
-          <div class="clave6-wrap">
-            <input id="reg-pass" type="password" autocomplete="new-password" required>
-          </div>
+          <div class="clave6-wrap"><input id="reg-pass" type="password" autocomplete="new-password" required></div>
         </div>
-
         <div class="login-step" id="reg-step-pass2">
           <label class="login-step-label" for="reg-pass2">Confirmar contraseña</label>
-          <div class="clave6-wrap">
-            <input id="reg-pass2" type="password" autocomplete="new-password" required>
-          </div>
-          <div class="notice-box">
-            <b>Importante:</b> guarda muy bien tu contraseña. Al crear la cuenta obtendras un código de recuperación de una sola vez — sin él no vas a poder recuperar el acceso.
-          </div>
+          <div class="clave6-wrap"><input id="reg-pass2" type="password" autocomplete="new-password" required></div>
+          <div class="notice-box"><b>Importante:</b> guarda muy bien tu contraseña. Al crear la cuenta obtendras un código de recuperación de una sola vez — sin él no vas a poder recuperar el acceso.</div>
         </div>
-
         <p class="field-error" id="reg-error"></p>
-
         <div class="step-nav" id="reg-nav">
-          <button type="button" id="reg-back" class="step-arrow-btn hidden" aria-label="Atrás">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
-          </button>
-          <button type="submit" id="reg-next" class="step-arrow-btn" aria-label="Siguiente">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
-          </button>
+          <button type="button" id="reg-back" class="step-arrow-btn hidden" aria-label="Atrás"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <button type="submit" id="reg-next" class="step-arrow-btn" aria-label="Siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
           <button type="submit" id="reg-submit" class="btn-primary hidden">CREAR CUENTA</button>
         </div>
       </form>
@@ -81,16 +67,10 @@
           <input id="log-user" type="text" autocomplete="username" required>
           <button type="submit" class="btn-primary">Verificar</button>
         </div>
-
         <div class="login-step" id="login-step-key">
-          <button type="button" id="login-step-back" class="login-step-back">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
-            <span>Usuario</span>
-          </button>
+          <button type="button" id="login-step-back" class="login-step-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg><span>Usuario</span></button>
           <label class="login-step-label" for="log-pass">Key</label>
-          <div class="clave6-wrap">
-            <input id="log-pass" type="password" autocomplete="current-password" required>
-          </div>
+          <div class="clave6-wrap"><input id="log-pass" type="password" autocomplete="current-password" required></div>
           <p class="field-error" id="log-error"></p>
           <button type="submit" class="btn-primary">Verificar</button>
         </div>
@@ -98,152 +78,45 @@
 
       <button id="auth-toggle" class="link-btn" type="button"></button>
       <button id="auth-reset" class="link-btn ghost" type="button">Olvidar este dispositivo</button>
-      <button id="auth-help" class="help-btn hidden" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.5 2.5 0 0 1 4.8 1c0 1.6-2.3 1.9-2.3 3.4"/><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg>
-        <span>Ayuda</span>
-      </button>
+      <button id="auth-help" class="help-btn hidden" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.5 2.5 0 0 1 4.8 1c0 1.6-2.3 1.9-2.3 3.4"/><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg><span>Ayuda</span></button>
     </div>
   </section>
 
-  <!-- ============ CÓDIGO DE RECUPERACIÓN (solo tras crear la cuenta) ============ -->
-  <section id="screen-recovery" class="screen auth">
-    <div class="auth-card" id="recovery-content"></div>
-  </section>
-
-  <!-- ============ SELECCIÓN DE PERFIL (primer inicio de sesión) ============ -->
+  <section id="screen-recovery" class="screen auth"><div class="auth-card" id="recovery-content"></div></section>
   <section id="screen-role" class="screen role">
-    <div class="role-wrap">
-      <img src="img/inicio.jpg" alt="" class="auth-logo">
-      <h1>¿Cómo vas a usar Riverospay?</h1>
-      <p class="muted">Elige tu perfil. Esta elección no se puede cambiar luego.</p>
-      <div class="role-cards">
-        <button class="role-card" id="role-empleado" data-role="empleado">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7.5" width="17" height="12.5" rx="2.2"/><path d="M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5"/><path d="M3.5 13h17"/></svg>
-          <span class="role-name">EMPLEADO</span>
-          <span class="role-desc muted">Registra tu trabajo, estudio y eventos</span>
-        </button>
-        <button class="role-card" id="role-jefe" data-role="jefe">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l1.6-8.4L9 12l3-6 3 6 3.4-2.4L20 18z"/><path d="M4 18h16"/></svg>
-          <span class="role-name">JEFE</span>
-          <span class="role-desc muted">Verifica en tiempo real a tu equipo</span>
-        </button>
-      </div>
-      <p class="field-error" id="role-error"></p>
-    </div>
+    <div class="role-wrap"><img src="img/inicio.jpg" alt="" class="auth-logo"><h1>¿Cómo vas a usar Riverospay?</h1><p class="muted">Elige tu perfil. Esta elección no se puede cambiar luego.</p><div class="role-cards">
+      <button class="role-card" id="role-empleado" data-role="empleado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7.5" width="17" height="12.5" rx="2.2"/><path d="M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5"/><path d="M3.5 13h17"/></svg><span class="role-name">EMPLEADO</span><span class="role-desc muted">Registra tu trabajo, estudio y eventos</span></button>
+      <button class="role-card" id="role-jefe" data-role="jefe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l1.6-8.4L9 12l3-6 3 6 3.4-2.4L20 18z"/><path d="M4 18h16"/></svg><span class="role-name">JEFE</span><span class="role-desc muted">Verifica en tiempo real a tu equipo</span></button>
+    </div><p class="field-error" id="role-error"></p></div>
   </section>
+  <section id="screen-nombre" class="screen auth"><div class="auth-card" id="nombre-content"></div></section>
 
-  <!-- ============ CONFIGURAR NOMBRE (parte del alta de cuenta) ============ -->
-  <section id="screen-nombre" class="screen auth">
-    <div class="auth-card" id="nombre-content"></div>
-  </section>
-
-  <!-- ============ APP ============ -->
   <section id="screen-app" class="screen app">
-    <header class="app-header">
-      <button id="btn-menu" class="icon-btn" aria-label="Abrir menú">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
-      </button>
-      <span id="app-username" class="app-username">Usuario</span>
-      <button id="btn-perfil" class="avatar" aria-label="Ver perfil">
-        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8.2" r="4"/><path d="M4 20c0-4.4 4-6.6 8-6.6s8 2.2 8 6.6"/></svg>
-      </button>
-    </header>
-
-    <nav class="tabbar" id="tabbar">
-      <button class="tab" data-tab="trabajo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-        <span>Trabajo</span>
-      </button>
-      <button class="tab" id="tab-estudio" data-tab="estudio">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>
-        <span>Estudio</span>
-      </button>
-      <button class="tab" data-tab="evento">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/><circle cx="12" cy="15" r="1.5" fill="currentColor" stroke="none"/></svg>
-        <span>Evento</span>
-      </button>
-    </nav>
-
+    <header class="app-header"><button id="btn-menu" class="icon-btn" aria-label="Abrir menú"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button><span id="app-username" class="app-username">Usuario</span><button id="btn-perfil" class="avatar" aria-label="Ver perfil"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8.2" r="4"/><path d="M4 20c0-4.4 4-6.6 8-6.6s8 2.2 8 6.6"/></svg></button></header>
+    <nav class="tabbar" id="tabbar"><button class="tab" data-tab="trabajo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Trabajo</span></button><button class="tab" id="tab-estudio" data-tab="estudio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg><span>Estudio</span></button><button class="tab" data-tab="evento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/><circle cx="12" cy="15" r="1.5" fill="currentColor" stroke="none"/></svg><span>Evento</span></button></nav>
     <main id="content" class="content"></main>
   </section>
 
-  <!-- ============ DRAWER (menú hamburguesa) ============ -->
   <div id="drawer-overlay" class="drawer-overlay"></div>
   <aside id="drawer" class="drawer">
-    <div class="drawer-brand">
-      <img src="img/inicio.jpg" alt="">
-      <span>Riverospay</span>
-    </div>
-    <button class="drawer-item" id="drawer-inicio">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9"/></svg>
-      Inicio
-    </button>
-    <button class="drawer-item hidden" id="drawer-compartir">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8 15.8 7.2M8.2 13.2l7.6 3.6"/></svg>
-      Compartir
-    </button>
-    <button class="drawer-item hidden" id="drawer-notificaciones">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
-      Notificaciones
-      <span class="notif-dot hidden" id="notif-dot"></span>
-    </button>
-    <button class="drawer-item hidden" id="drawer-verificar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12.5l2 2 4-4.5"/><circle cx="12" cy="12" r="9"/></svg>
-      Verificar
-    </button>
-    <button class="drawer-item" id="drawer-informacion">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r="0.9" fill="currentColor" stroke="none"/></svg>
-      Información
-    </button>
-    <button class="drawer-item" id="drawer-logout" style="color:var(--danger);">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H6.5A2.5 2.5 0 0 0 4 6.5v11A2.5 2.5 0 0 0 6.5 20H10"/><path d="M14 8l4 4-4 4"/><path d="M18 12H9"/></svg>
-      Cerrar sesión
-    </button>
+    <div class="drawer-brand"><img src="img/inicio.jpg" alt=""><span>Riverospay</span></div>
+    <button class="drawer-item" id="drawer-inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9"/></svg>Inicio</button>
+    <button class="drawer-item hidden" id="drawer-compartir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8 15.8 7.2M8.2 13.2l7.6 3.6"/></svg>Compartir</button>
+    <button class="drawer-item hidden" id="drawer-notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>Notificaciones<span class="notif-dot hidden" id="notif-dot"></span></button>
+    <button class="drawer-item hidden" id="drawer-verificar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12.5l2 2 4-4.5"/><circle cx="12" cy="12" r="9"/></svg>Verificar</button>
+    <button class="drawer-item" id="drawer-configuracion"><span aria-hidden="true">⚙️</span><span>Configuración</span></button>
+    <button class="drawer-item" id="drawer-informacion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r="0.9" fill="currentColor" stroke="none"/></svg>Información</button>
+    <button class="drawer-item" id="drawer-logout" style="color:var(--danger);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H6.5A2.5 2.5 0 0 0 4 6.5v11A2.5 2.5 0 0 0 6.5 20H10"/><path d="M14 8l4 4-4 4"/><path d="M18 12H9"/></svg>Cerrar sesión</button>
     <p class="drawer-footnote">Prototipo · actualización en curso</p>
   </aside>
 
-  <!-- ============ SOLICITUD DE VERIFICACIÓN (para el EMPLEADO) ============ -->
   <div id="request-overlay" class="drawer-overlay"></div>
-  <div id="request-card" class="request-card">
-    <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8 15.8 7.2M8.2 13.2l7.6 3.6"/></svg></div>
-    <h2>Solicitud de verificación</h2>
-    <p class="muted" id="request-text"></p>
-    <div class="request-actions">
-      <button class="btn-ghost-danger" id="request-rechazar">Rechazar</button>
-      <button class="btn-primary" id="request-aceptar">Aceptar</button>
-    </div>
-  </div>
-
-  <!-- ============ MODAL GENÉRICO ============ -->
-  <div id="modal-overlay" class="drawer-overlay"></div>
-  <div id="modal" class="modal">
-    <div class="modal-head">
-      <h3 id="modal-title"></h3>
-      <button id="modal-close" class="icon-btn small" aria-label="Cerrar">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
-      </button>
-    </div>
-    <div id="modal-body" class="modal-body"></div>
-  </div>
-
+  <div id="request-card" class="request-card"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8 15.8 7.2M8.2 13.2l7.6 3.6"/></svg></div><h2>Solicitud de verificación</h2><p class="muted" id="request-text"></p><div class="request-actions"><button class="btn-ghost-danger" id="request-rechazar">Rechazar</button><button class="btn-primary" id="request-aceptar">Aceptar</button></div></div>
+  <div id="modal-overlay" class="drawer-overlay"></div><div id="modal" class="modal"><div class="modal-head"><h3 id="modal-title"></h3><button id="modal-close" class="icon-btn small" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button></div><div id="modal-body" class="modal-body"></div></div>
   <div id="toast" class="toast"></div>
-
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<!-- Módulos en el mismo orden en que se ejecutaba app.js original -->
-<script src="js/core/state.js"></script>
-<script src="js/core/helpers.js"></script>
-<script src="js/ui/navigation.js"></script>
-<script src="js/auth/auth.js"></script>
-<script src="js/perfil/perfil.js"></script>
-<script src="js/socket/socket.js"></script>
-<script src="js/home/home.js"></script>
-<script src="js/trabajo/trabajo.js"></script>
-<script src="js/estudio/estudio.js"></script>
-<script src="js/eventos/eventos.js"></script>
-<script src="js/notificaciones/notificaciones.js"></script>
-<script src="js/jefe/verificacion.js"></script>
-<script src="js/main.js"></script>
+<script src="js/core/state.js"></script><script src="js/core/helpers.js"></script><script src="js/ui/navigation.js"></script><script src="js/auth/auth.js"></script><script src="js/perfil/perfil.js"></script><script src="js/socket/socket.js"></script><script src="js/home/home.js"></script><script src="js/trabajo/trabajo.js"></script><script src="js/estudio/estudio.js"></script><script src="js/eventos/eventos.js"></script><script src="js/notificaciones/notificaciones.js"></script><script src="js/jefe/verificacion.js"></script><script src="js/main.js"></script>
 </body>
 </html>
