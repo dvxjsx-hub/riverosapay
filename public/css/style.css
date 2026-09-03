@@ -151,6 +151,18 @@ input,textarea,select{font-family:inherit;}
 }
 .login-step-back svg{width:16px;height:16px;}
 
+/* ============ REGISTRO (paso a paso: Usuario -> Contraseña -> Confirmar) ============ */
+.step-nav{display:flex;align-items:center;justify-content:center;gap:16px;width:100%;margin-top:6px;}
+.step-nav .btn-primary{margin-top:0;}
+.step-arrow-btn{
+  background:var(--green-700);color:#fff;border:none;width:56px;height:56px;border-radius:16px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;
+  box-shadow:0 10px 20px -8px rgba(28,122,62,.55);
+  transition:transform .12s ease, background .15s ease;
+}
+.step-arrow-btn:active{transform:scale(.94);background:var(--green-800);}
+.step-arrow-btn svg{width:22px;height:22px;}
+
 /* clave (KEY) mostrada como 6 segmentos, en vez del input en crudo */
 .clave6-wrap{position:relative;width:100%;height:46px;}
 .auth-form .login-step .clave6-wrap input{
