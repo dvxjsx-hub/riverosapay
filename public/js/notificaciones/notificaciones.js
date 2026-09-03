@@ -2,7 +2,7 @@
    Riverosapay · NOTIFICACIONES
    Las notificaciones se separan por modo: EMPLEADO / BOSS.
    ============================================================ */
-function modoDestinoNotificacion(n) { if (n && (n.modoDestino === 'jefe' || n.modoDestino === 'empleado')) return n.modoDestino; if (n && (n.tipo === 'jefe_asignado_trabajo' || n.tipo === 'trabajo_eliminacion_solicitada' || n.tipo === 'trabajo_solicitud_aceptada' || n.tipo === 'trabajo_solicitud_rechazada')) return 'jefe'; return 'empleado'; }
+function modoDestinoNotificacion(n) { if (n && (n.modoDestino === 'jefe' || n.modoDestino === 'empleado')) return n.modoDestino; if (n && (n.tipo === 'jefe_asignado_trabajo' || n.tipo === 'trabajo_eliminacion_solicitada' || n.tipo === 'trabajo_solicitud_aceptada' || n.tipo === 'trabajo_solicitud_rechazada' || n.tipo === 'trabajo_finalizado_boss')) return 'jefe'; return 'empleado'; }
 function notificacionesDelModoActual() { return (STATE.notificaciones || []).filter(n => modoDestinoNotificacion(n) === modoActualUsuario()); }
 function updateNotifBadge() { const hayAlgoPendiente = notificacionesDelModoActual().some(n => (n.tipo === 'solicitud' && n.estado === 'pendiente') || (n.tipo !== 'solicitud' && !n.leida)); const dot = $('#notif-dot'); if (dot) dot.classList.toggle('hidden', !hayAlgoPendiente); }
 async function loadNotificaciones() { STATE.notificaciones = await api.get(`/api/notificaciones/${STATE.user.id}`); updateNotifBadge(); return STATE.notificaciones; }
@@ -20,6 +20,8 @@ function notifTextoHTML(n) {
   if (n.tipo === 'trabajo_solicitud_rechazada') return `<b>${escapeHtml(n.empleadoNombre || n.empleadoUsername || 'Tu amistad')}</b> rechazó el trabajo "${escapeHtml(n.lugar || '')}".`;
   if (n.tipo === 'trabajo_añadido') return `<b>${escapeHtml(n.jefeUsername || 'Tu BOSS')}</b> añadió un nuevo trabajo "${escapeHtml(n.lugar || '')}".`;
   if (n.tipo === 'trabajo_pagado') return `<b>${escapeHtml(n.jefeUsername || 'Tu BOSS')}</b> pagó/abonó tu trabajo "${escapeHtml(n.lugar || '')}".`;
+  if (n.tipo === 'trabajo_finalizado') return `<b>${escapeHtml(n.jefeUsername || 'Tu BOSS')}</b> finalizó el trabajo "${escapeHtml(n.lugar || '')}".`;
+  if (n.tipo === 'trabajo_finalizado_boss') return `<b>${escapeHtml(n.empleadoNombre || n.empleadoUsername || 'Tu empleado')}</b> finalizó el trabajo "${escapeHtml(n.lugar || '')}".`;
   if (n.tipo === 'jefe_configurado') return `<b>${escapeHtml(n.jefeUsername || 'BOSS')}</b> ha sido configurado.`;
   if (n.tipo === 'trabajo_eliminado') return `<b>${escapeHtml(n.jefeUsername || 'Tu BOSS')}</b> eliminó el trabajo "${escapeHtml(n.lugar || '')}".`;
   if (n.tipo === 'trabajo_eliminacion_rechazada') return `<b>${escapeHtml(n.jefeUsername || 'Tu BOSS')}</b> rechazó tu solicitud para eliminar un trabajo.`;
