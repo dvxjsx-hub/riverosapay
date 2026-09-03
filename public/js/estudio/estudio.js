@@ -28,7 +28,6 @@ function materiasOrdenadas(materias) {
     const db = indiceDia(b.dia);
     if (da !== db) return da - db;
 
-    // En el día actual, las clases ya pasadas aparecen primero.
     if (a.dia === hoy && b.dia === hoy) {
       const aPasada = minutosHora(a.horaFin) <= minutoActual;
       const bPasada = minutosHora(b.horaFin) <= minutoActual;
@@ -220,4 +219,64 @@ async function toggleActividad(id, hecha) {
 async function eliminarActividad(id) {
   try { await api.delete(`/api/estudio/actividades/${id}`); toast('Actividad eliminada'); openPendientes(); }
   catch (ex) { toast(ex.message); }
+}
+
+/* ---- Bloque 3: visibilidad de Estudio según Sesión académica ---- */
+function sesionAcademicaActiva() {
+  return STATE.user?.esEstudiante === true;
+}
+
+function actualizarVisibilidadEstudio() {
+  const activo = sesionAcademicaActiva();
+  const tab = $('#tab-estudio');
+  if (tab) tab.classList.toggle('hidden', !activo);
+
+  if (!activo && STATE.activeTab === 'estudio') {
+    STATE.activeTab = null;
+    $all('.tab').forEach(b => b.classList.remove('active'));
+    if (STATE.viewMode === 'empleado') renderHome();
+  }
+
+  $all('#content button').forEach(btn => {
+    if (btn.textContent.trim() === 'Estudio') btn.classList.toggle('hidden', !activo);
+  });
+}
+
+const _enterAppEstudio = typeof enterApp === 'function' ? enterApp : null;
+if (_enterAppEstudio) {
+  enterApp = function(...args) {
+    const resultado = _enterAppEstudio.apply(this, args);
+    actualizarVisibilidadEstudio();
+    return resultado;
+  };
+}
+
+const _abrirOrganizadorEstudio = typeof abrirOrganizador === 'function' ? abrirOrganizador : null;
+if (_abrirOrganizadorEstudio) {
+  abrirOrganizador = function(...args) {
+    const resultado = _abrirOrganizadorEstudio.apply(this, args);
+    actualizarVisibilidadEstudio();
+    return resultado;
+  };
+}
+
+const _seleccionarOrganizadorEstudio = typeof seleccionarOrganizador === 'function' ? seleccionarOrganizador : null;
+if (_seleccionarOrganizadorEstudio) {
+  seleccionarOrganizador = function(tab, ...args) {
+    if (tab === 'estudio' && !sesionAcademicaActiva()) {
+      toast('Activa la Sesión académica desde Configuración para usar Estudio.');
+      actualizarVisibilidadEstudio();
+      return;
+    }
+    return _seleccionarOrganizadorEstudio.call(this, tab, ...args);
+  };
+}
+
+const _setupTabsEstudio = typeof setupTabs === 'function' ? setupTabs : null;
+if (_setupTabsEstudio) {
+  setupTabs = function(...args) {
+    const resultado = _setupTabsEstudio.apply(this, args);
+    actualizarVisibilidadEstudio();
+    return resultado;
+  };
 }
