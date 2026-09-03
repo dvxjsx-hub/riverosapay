@@ -37,14 +37,23 @@ function configurarCamposClave6() {
   });
 
   // El login es compartido con Admin: NO poner maxlength aquí.
+  // La clave de usuario es numérica, no una contraseña de texto:
+  // mostramos los dígitos directamente y evitamos el comportamiento
+  // visual de password del navegador/teclado móvil.
   const login = $('#log-pass');
   if (login) {
+    login.type = 'text';
     login.inputMode = 'numeric';
     login.pattern = '[0-9]+';
     login.removeAttribute('maxlength');
     login.removeAttribute('minlength');
+    login.autocomplete = 'off';
     login.placeholder = '6 dígitos';
-    instalarVisorClave6(login);
+    if (login.dataset.claveViewer === '1') {
+      const viewer = login.nextElementSibling;
+      if (viewer && viewer.classList.contains('clave6-viewer')) viewer.remove();
+      delete login.dataset.claveViewer;
+    }
   }
 }
 
@@ -79,6 +88,15 @@ function setLoginStep(step, opts) {
   $('#login-step-user').classList.toggle('active', !isKey);
   $('#login-step-key').classList.toggle('active', isKey);
   $('#log-error').textContent = '';
+
+  // IMPORTANTE: un input required que está en el paso oculto puede impedir
+  // que el submit del primer paso llegue a JavaScript. Solo el campo visible
+  // debe participar en la validación HTML.
+  const usuario = $('#log-user');
+  const clave = $('#log-pass');
+  if (usuario) usuario.required = !isKey;
+  if (clave) clave.required = isKey;
+
   if (opts && opts.noFocus) return;
   setTimeout(() => {
     const campo = isKey ? $('#log-pass') : $('#log-user');
@@ -179,6 +197,7 @@ function setupAuth() {
       return;
     }
     const username = $('#log-user').value.trim(), pass = $('#log-pass').value, err = $('#log-error');
+    if (!CLAVE_USUARIO_REGEX.test(pass)) { err.textContent = 'La clave debe tener exactamente 6 dígitos.'; return; }
     try {
       const auth = await api.post('/api/auth/login', { username, password: pass });
       if (auth?.tipo === 'admin') {
