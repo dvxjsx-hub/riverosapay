@@ -81,7 +81,42 @@ const _abrirCambiarJefeT5 = typeof abrirCambiarJefe === 'function' ? abrirCambia
 const _setPagadoT5 = typeof setPagado === 'function' ? setPagado : null; if (_setPagadoT5) setPagado = async function(turnoId, pagado) { try { await api.patch(`/api/trabajo/turnos/${turnoId}`, { pagado, actorJefeId: STATE.user.id, actorJefeUsername: STATE.user.username }); toast(pagado ? 'Marcado como pagado' : 'Marcado como no pagado'); await refrescarJefeTrabajo(); openTurnoDetail(turnoId); } catch (ex) { toast(ex.message); } };
 const _guardarValorT5 = typeof guardarValor === 'function' ? guardarValor : null; if (_guardarValorT5) guardarValor = async function(turnoId) { const raw = $('#f-valor')?.value; try { await api.patch(`/api/trabajo/turnos/${turnoId}`, { valor: raw === '' ? null : Number(raw), actorJefeId: STATE.user.id, actorJefeUsername: STATE.user.username }); toast('Valor guardado'); await refrescarJefeTrabajo(); openTurnoDetail(turnoId); } catch (ex) { toast(ex.message); } };
 
+/* ============================================================
+   AJUSTES AUTH — interfaz solicitada, sin alterar la lógica.
+   ============================================================ */
+function aplicarUIAuth() {
+  const sub = $('#auth-sub');
+  if (sub) sub.textContent = '';
+  const toggle = $('#auth-toggle');
+  if (toggle) toggle.textContent = 'Crear nueva cuenta';
+  const regUser = $('#reg-user');
+  if (regUser) regUser.placeholder = '';
+  const regTitle = $('#auth-title');
+  if (regTitle && $('#form-register') && !$('#form-register').classList.contains('hidden')) regTitle.textContent = 'Crear usuario';
+}
+
+const _abrirAyudaLoginAuthUI = typeof abrirAyudaLogin === 'function' ? abrirAyudaLogin : null;
+if (_abrirAyudaLoginAuthUI) {
+  abrirAyudaLogin = function() {
+    _abrirAyudaLoginAuthUI();
+    const body = $('#modal-body');
+    if (!body) return;
+    [...body.querySelectorAll('button')].forEach(btn => {
+      if (btn.textContent.trim() === 'Olvidar este dispositivo') btn.remove();
+    });
+  };
+}
+
+const _setAuthModeAuthUI = typeof setAuthMode === 'function' ? setAuthMode : null;
+if (_setAuthModeAuthUI) {
+  setAuthMode = function(mode) {
+    _setAuthModeAuthUI(mode);
+    aplicarUIAuth();
+  };
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   setupAuth(); try { await cargarModuloAmistades(); } catch (ex) { console.error(ex); }
+  aplicarUIAuth();
   setupDrawer(); setupPerfil(); setupTabs(); setupModal(); setupRequestCard(); initSplash();
 });
