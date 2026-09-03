@@ -21,6 +21,7 @@ const estudioRoutes = require('./src/routes/estudio.routes');
 const eventoRoutes = require('./src/routes/evento.routes');
 const verificacionRoutes = require('./src/routes/verificacion.routes');
 const amistadesRoutes = require('./src/routes/amistades.routes');
+const tesoreriaRoutes = require('./src/routes/tesoreria.routes');
 
 const app = express();
 app.use(express.json());
@@ -42,6 +43,7 @@ app.use('/api/estudio', estudioRoutes);
 app.use('/api/evento', eventoRoutes);
 app.use('/api', verificacionRoutes);
 app.use('/api/amistades', amistadesRoutes);
+app.use('/api/tesoreria', tesoreriaRoutes);
 
 app.use(errorHandler);
 
