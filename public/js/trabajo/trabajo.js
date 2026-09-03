@@ -258,10 +258,11 @@ async function guardarValor(turnoId) {
 }
 
 /* ============================================================
-   Actualización 5.5 · congelado de trabajos finalizados
+   Bloque 5: funciones adicionales
    ============================================================ */
+
 async function congelarTrabajo(turnoId) {
-  openModal('Congelar trabajo', `<p style="margin:0 0 12px;">Esta acción es permanente.</p><p class="muted" style="margin:0;">Después de congelarlo, el trabajo y su pago ya no podrán editarse. No se puede descongelar.</p><div class="notif-actions" style="display:flex;gap:8px;margin-top:16px;"><button class="btn-secondary" type="button" onclick="closeModal()">Cancelar</button><button class="btn-primary" type="button" onclick="confirmarCongelacionTrabajo('${turnoId}')">Sí, congelar trabajo</button></div>`);
+  openModal('Congelar trabajo', `<p style="margin:0 0 12px;">Esta acción es permanente.</p><p class="muted" style="margin:0;">Después de congelarlo, el trabajo y su pago ya no podrán editarse. No se puede descongelar.</p><div class="notif-actions" style="display:flex;gap:8px;margin-top:16px;"><button class="btn-secondary" type="button" onclick="closeModal()">Cancelar</button><button class="btn-primary" type="button" onclick="confirmarCongelacionTrabajo('${turnoId}')">Confirmar</button></div>`);
 }
 
 async function confirmarCongelacionTrabajo(turnoId) {
