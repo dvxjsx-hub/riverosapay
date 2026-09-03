@@ -1,23 +1,7 @@
 function adminEstilo() {
-  if (document.getElementById('admin-style')) return;
-  const style = document.createElement('style');
-  style.id = 'admin-style';
-  style.textContent = `
-    #screen-admin{background:#fff;color:#15201A;overflow:hidden;}
-    .admin-top{height:64px;min-height:64px;background:#155C31;color:#fff;display:flex;align-items:center;padding:0 20px;gap:12px;box-shadow:0 4px 14px rgba(15,61,36,.16);}
-    .admin-top img{width:34px;height:34px;border-radius:10px;object-fit:cover;}
-    .admin-title{font-family:var(--font-display);font-weight:700;font-size:15px;letter-spacing:.03em;}
-    .admin-body{flex:1;min-height:0;overflow-y:auto;padding:22px 18px 34px;}
-    .admin-body h1{font-family:var(--font-display);font-size:22px;margin:0 0 4px;color:#0F3D24;}
-    .admin-sub{font-size:13px;color:#69746D;margin:0 0 18px;}
-    .admin-account{border-bottom:1px solid #E7E3F0;padding:14px 2px;}
-    .admin-account-name{font-weight:700;font-size:15px;}
-    .admin-account-meta{font-size:12px;color:#69746D;line-height:1.55;margin-top:3px;}
-    .admin-account button{margin-top:9px;background:#fff;color:#D64545;border:1px solid #F0CACA;border-radius:9px;padding:8px 11px;font-weight:600;cursor:pointer;}
-    .admin-empty{padding:25px 2px;color:#69746D;font-size:13px;}
-    .admin-logout{margin-top:24px;width:100%;padding:12px;background:#fff;color:#D64545;border:1px solid #F0CACA;border-radius:10px;font-weight:600;cursor:pointer;}
-  `;
-  document.head.appendChild(style);
+  /* Los estilos del panel de administrador viven en css/style.css,
+     usando los mismos tokens (--green-900, --radius-md, etc.) que
+     el resto de la app. Esta función se conserva por compatibilidad. */
 }
 
 function asegurarPantallaAdmin() {
@@ -29,12 +13,17 @@ function asegurarPantallaAdmin() {
   screen.innerHTML = `
     <div class="admin-top">
       <img src="img/inicio.jpg" alt="">
-      <span class="admin-title">ADMINISTRADOR</span>
+      <div class="admin-top-text">
+        <span class="admin-title">ADMINISTRADOR</span>
+        <span class="admin-subtitle">Riverosapay · panel interno</span>
+      </div>
     </div>
     <main class="admin-body">
-      <h1>Cuentas</h1>
-      <p class="admin-sub">Usuarios registrados en RiveroZapay</p>
-      <div id="admin-cuentas"></div>
+      <div class="admin-head">
+        <h1>Cuentas</h1>
+        <p class="admin-sub">Usuarios registrados en Riverosapay</p>
+      </div>
+      <div id="admin-cuentas" class="admin-list"></div>
       <button id="admin-logout" class="admin-logout" type="button">Cerrar sesión</button>
     </main>
   `;
@@ -61,13 +50,22 @@ async function cargarCuentasAdmin() {
       cont.innerHTML = '<div class="admin-empty">No hay cuentas registradas.</div>';
       return;
     }
-    cont.innerHTML = cuentas.map(u => `
+    cont.innerHTML = cuentas.map(u => {
+      const inicial = escapeHtml((u.nombreCompleto || u.username || '?').trim().slice(0, 1).toUpperCase());
+      return `
       <article class="admin-account">
-        <div class="admin-account-name">${escapeHtml(u.nombreCompleto || 'Sin nombre configurado')}</div>
-        <div class="admin-account-meta">Usuario: ${escapeHtml(u.username)}<br>ID: ${escapeHtml(u.id)}<br>Creada: ${formatAdminDate(u.createdAt)}<br>Última conexión: ${formatAdminDate(u.lastLoginAt)}<br>Recuperación: ${u.recoveryConfigured ? 'Configurada' : 'No configurada'}</div>
-        <button type="button" data-admin-delete="${escapeHtml(u.id)}">Eliminar cuenta</button>
+        <span class="admin-avatar">${inicial}</span>
+        <div class="admin-account-body">
+          <div class="admin-account-name">${escapeHtml(u.nombreCompleto || 'Sin nombre configurado')}</div>
+          <div class="admin-account-meta">@${escapeHtml(u.username)} · ID ${escapeHtml(u.id)}<br>Creada: ${formatAdminDate(u.createdAt)}<br>Última conexión: ${formatAdminDate(u.lastLoginAt)}</div>
+          <div class="admin-badges">
+            <span class="admin-badge ${u.recoveryConfigured ? 'ok' : 'warn'}">${u.recoveryConfigured ? 'Recuperación configurada' : 'Sin recuperación'}</span>
+          </div>
+        </div>
+        <button class="admin-delete-btn" type="button" data-admin-delete="${escapeHtml(u.id)}" aria-label="Eliminar cuenta">${ICONS.trash}</button>
       </article>
-    `).join('');
+    `;
+    }).join('');
     cont.querySelectorAll('[data-admin-delete]').forEach(btn => {
       btn.addEventListener('click', () => eliminarCuentaAdmin(btn.dataset.adminDelete));
     });
