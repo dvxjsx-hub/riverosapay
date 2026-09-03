@@ -3,6 +3,11 @@
    Solicitudes: enviar → aceptar/rechazar → amistad.
    ============================================================ */
 
+function verificacionAmigoHTML(a) {
+  if (a.verificada !== true) return '';
+  return '<span title="Cuenta verificada" aria-label="Cuenta verificada" style="position:absolute;right:-2px;top:-2px;width:18px;height:18px;border-radius:50%;background:#8FE3B0;color:#0F3D24;border:2px solid var(--surface);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;line-height:1;">✓</span>';
+}
+
 async function openAmistades() {
   openModal('Amistades', '<div id="amistades-content"><p class="muted" style="text-align:center;">Cargando tus amistades…</p></div>');
   try { await cargarAmistades(); } catch (ex) { const el = $('#amistades-content'); if (el) el.innerHTML = `<p class="field-error">${escapeHtml(ex.message)}</p>`; }
@@ -25,8 +30,8 @@ async function cargarAmistades() {
     </section>` : '';
   const lista = STATE.amistades.length ? STATE.amistades.map(a => `
     <div style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:12px;">
-      <span style="width:42px;height:42px;border-radius:50%;background:var(--green-100);color:var(--green-800);display:flex;align-items:center;justify-content:center;font-weight:700;">${escapeHtml((a.nombreCompleto || a.username || '?').slice(0,1).toUpperCase())}</span>
-      <div style="flex:1;min-width:0;"><b>${escapeHtml(a.nombreCompleto || a.username)}</b><div class="muted" style="font-size:12px;">ID: ${escapeHtml(a.username)}</div></div>
+      <span style="position:relative;width:42px;height:42px;border-radius:50%;background:var(--green-100);color:var(--green-800);display:flex;align-items:center;justify-content:center;font-weight:700;flex:none;">${escapeHtml((a.nombreCompleto || a.username || '?').slice(0,1).toUpperCase())}${verificacionAmigoHTML(a)}</span>
+      <div style="flex:1;min-width:0;"><b style="${a.verificada === true ? 'color:#55A86F;' : ''}">${escapeHtml(a.nombreCompleto || a.username)}</b><div class="muted" style="font-size:12px;">ID: ${escapeHtml(a.username)}</div></div>
       <button class="btn-ghost-danger" type="button" onclick="eliminarAmistad('${a.id}')">Eliminar</button>
     </div>`).join('') : '<div class="empty-card" style="padding:22px 16px;"><h3 style="margin:0;">Aún no tienes amistades</h3><p class="muted">Añade una persona usando su código de amistad.</p></div>';
   el.innerHTML = `
