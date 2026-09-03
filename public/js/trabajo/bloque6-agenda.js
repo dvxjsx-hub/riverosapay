@@ -18,8 +18,9 @@
     const cambiarSubTabJefeBase = window.cambiarSubTabJefe;
     const renderJefeViewBase = window.renderJefeView;
 
-    function switchHTML(id, activo, etiqueta, descripcion) {
-      return `<button class="settings-item" type="button" onclick="alternarPermisoAgenda('${id}', ${!activo})" style="width:100%;text-align:left;">
+    function switchHTML(id, activo, etiqueta, descripcion, esNuevo = false) {
+      const accion = esNuevo ? `alternarPermisoAgendaNuevo(${!activo})` : `alternarPermisoAgenda('${id}', ${!activo})`;
+      return `<button class="settings-item" type="button" onclick="${accion}" style="width:100%;text-align:left;">
         <span class="settings-icon" aria-hidden="true">◫</span>
         <span class="settings-label">${etiqueta}<span class="settings-value">${activo ? 'Sí' : 'No'}</span></span>
         <span class="theme-switch ${activo ? 'active' : ''}" id="agenda-toggle-${id}" role="switch" aria-label="${etiqueta}" aria-checked="${activo}"><span></span></span>
@@ -32,7 +33,7 @@
       const contenedor = document.createElement('div');
       contenedor.id = 'f-permiso-agenda';
       contenedor.style.marginTop = '10px';
-      contenedor.innerHTML = switchHTML('nuevo', false, 'Permitir al BOSS ver mis Académicos y Eventos', 'Podrá consultar tu horario y tus eventos únicamente en modo lectura.');
+      contenedor.innerHTML = switchHTML('nuevo', false, 'Permitir al BOSS ver mis Académicos y Eventos', 'Podrá consultar tu horario y tus eventos únicamente en modo lectura.', true);
       const referencia = select.closest('label')?.nextElementSibling;
       if (referencia) referencia.insertAdjacentElement('afterend', contenedor);
       else document.getElementById('modal-body')?.appendChild(contenedor);
