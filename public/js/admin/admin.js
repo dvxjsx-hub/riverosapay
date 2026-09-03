@@ -52,15 +52,19 @@ async function cargarCuentasAdmin() {
     }
     cont.innerHTML = cuentas.map(u => {
       const inicial = escapeHtml((u.nombreCompleto || u.username || '?').trim().slice(0, 1).toUpperCase());
+      const verificada = u.verificada === true;
+      const badge = verificada ? '<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#8FE3B0;color:#0F3D24;font-size:11px;font-weight:800;margin-left:5px;vertical-align:middle;">✓</span>' : '';
       return `
       <article class="admin-account">
         <span class="admin-avatar">${inicial}</span>
         <div class="admin-account-body">
-          <div class="admin-account-name">${escapeHtml(u.nombreCompleto || 'Sin nombre configurado')}</div>
+          <div class="admin-account-name">${escapeHtml(u.nombreCompleto || 'Sin nombre configurado')}${badge}</div>
           <div class="admin-account-meta">@${escapeHtml(u.username)} · ID ${escapeHtml(u.id)}<br>Creada: ${formatAdminDate(u.createdAt)}<br>Última conexión: ${formatAdminDate(u.lastLoginAt)}</div>
           <div class="admin-badges">
             <span class="admin-badge ${u.recoveryConfigured ? 'ok' : 'warn'}">${u.recoveryConfigured ? 'Recuperación configurada' : 'Sin recuperación'}</span>
+            <span class="admin-badge ${verificada ? 'ok' : 'warn'}">${verificada ? 'Cuenta verificada' : 'No verificada'}</span>
           </div>
+          <button type="button" style="width:100%;margin-top:8px;" class="${verificada ? 'btn-secondary' : 'btn-primary'}" data-admin-verify="${escapeHtml(u.id)}">${verificada ? 'Quitar verificación' : 'Marcar como verificada'}</button>
         </div>
         <button class="admin-delete-btn" type="button" data-admin-delete="${escapeHtml(u.id)}" aria-label="Eliminar cuenta">${ICONS.trash}</button>
       </article>
@@ -69,8 +73,24 @@ async function cargarCuentasAdmin() {
     cont.querySelectorAll('[data-admin-delete]').forEach(btn => {
       btn.addEventListener('click', () => eliminarCuentaAdmin(btn.dataset.adminDelete));
     });
+    cont.querySelectorAll('[data-admin-verify]').forEach(btn => {
+      btn.addEventListener('click', () => cambiarVerificacionAdmin(btn.dataset.adminVerify));
+    });
   } catch (ex) {
     cont.innerHTML = `<div class="admin-empty">${escapeHtml(ex.message)}</div>`;
+  }
+}
+
+async function cambiarVerificacionAdmin(userId) {
+  const cuenta = (await api.get('/api/admin/cuentas')).cuentas?.find(u => u.id === userId);
+  if (!cuenta) { toast('Cuenta no encontrada.'); return; }
+  const nuevoEstado = cuenta.verificada !== true;
+  try {
+    await api.patch(`/api/admin/cuentas/${encodeURIComponent(userId)}/verificada`, { verificada: nuevoEstado });
+    toast(nuevoEstado ? 'Cuenta marcada como verificada.' : 'Verificación retirada.');
+    await cargarCuentasAdmin();
+  } catch (ex) {
+    toast(ex.message);
   }
 }
 
