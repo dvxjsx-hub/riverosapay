@@ -53,13 +53,18 @@ function initSplash() { setTimeout(goToAuth, 2200); }
 function goToAuth() {
   showScreen('screen-auth');
   const lastUser = localStorage.getItem('riverospay_last_user');
-  if (lastUser) { setAuthMode('login'); $('#log-user').value = lastUser; }
-  else setAuthMode('register');
+  if (lastUser) {
+    setAuthMode('login');
+    $('#log-user').value = lastUser;
+    setLoginStep('key', { noFocus: true });
+  } else {
+    setAuthMode('register');
+  }
   configurarCamposClave6();
 
   // No robar el foco al usuario durante la transición a login/registro.
   setTimeout(() => {
-    const campo = lastUser ? $('#log-user') : $('#reg-user');
+    const campo = lastUser ? $('#log-pass') : $('#reg-user');
     if (!campo) return;
     const active = document.activeElement;
     if (active && active !== document.body && active !== document.documentElement) return;
@@ -68,17 +73,59 @@ function goToAuth() {
   }, 80);
 }
 
+// Alterna entre el paso "Usuario" y el paso "Key" dentro del login.
+function setLoginStep(step, opts) {
+  const isKey = step === 'key';
+  $('#login-step-user').classList.toggle('active', !isKey);
+  $('#login-step-key').classList.toggle('active', isKey);
+  $('#log-error').textContent = '';
+  if (opts && opts.noFocus) return;
+  setTimeout(() => {
+    const campo = isKey ? $('#log-pass') : $('#log-user');
+    if (!campo) return;
+    const active = document.activeElement;
+    if (active && active !== document.body && active !== document.documentElement) return;
+    if (!$('#screen-auth').classList.contains('active')) return;
+    campo.focus({ preventScroll: true });
+  }, 60);
+}
+
 function setAuthMode(mode) {
   const isLogin = mode === 'login';
   $('#form-register').classList.toggle('hidden', isLogin);
   $('#form-login').classList.toggle('hidden', !isLogin);
-  $('#auth-title').textContent = isLogin ? 'Iniciar sesión' : 'Crear usuario';
-  $('#auth-sub').textContent = isLogin ? 'Ingresa tus datos guardados en el servidor' : 'Configura tu acceso al organizador';
+  $('#auth-title').textContent = isLogin ? '¡Bienvenido de nuevo!' : 'Crear usuario';
+  $('#auth-sub').textContent = isLogin ? 'Inicia sesión en Riverosapay' : 'Configura tu acceso al organizador';
   $('#auth-toggle').textContent = isLogin ? '¿No tienes cuenta? Crear una' : '¿Ya tienes cuenta? Iniciar sesión';
   $('#auth-toggle').dataset.next = isLogin ? 'register' : 'login';
+  $('#auth-toggle').classList.toggle('hidden', isLogin);
+  $('#auth-reset').classList.toggle('hidden', isLogin);
+  $('#auth-help').classList.toggle('hidden', !isLogin);
   $('#reg-error').textContent = '';
   $('#log-error').textContent = '';
+  if (isLogin) setLoginStep('user', { noFocus: true });
   setTimeout(configurarCamposClave6, 0);
+}
+
+function abrirAyudaLogin() {
+  openModal('Ayuda', `
+    <button type="button" class="help-sheet-item" onclick="closeModal(); abrirRecuperarContrasena();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 5l3 3M13 8l2 2"/></svg>
+      <span>Olvidé mi contraseña</span>
+    </button>
+    <button type="button" class="help-sheet-item" onclick="closeModal(); setAuthMode('register');">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.2" r="4"/><path d="M4 20c0-4.4 4-6.6 8-6.6s8 2.2 8 6.6"/></svg>
+      <span>Crear nueva cuenta</span>
+    </button>
+    <button type="button" class="help-sheet-item" onclick="closeModal(); openInformacion();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r="0.9" fill="currentColor" stroke="none"/></svg>
+      <span>Información</span>
+    </button>
+    <button type="button" class="help-sheet-item" onclick="closeModal(); $('#auth-reset').click();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6"/><path d="M20 12a8 8 0 1 1-2.34-5.66L20 10"/></svg>
+      <span>Olvidar este dispositivo</span>
+    </button>
+  `);
 }
 
 function cargarModuloAdmin() {
@@ -105,7 +152,8 @@ function setupAuth() {
       if (campo && (!active || active === document.body || active === document.documentElement)) campo.focus({ preventScroll: true });
     }, 50);
   });
-  $('#auth-olvide').addEventListener('click', (e) => { e.preventDefault(); abrirRecuperarContrasena(); });
+  $('#auth-help').addEventListener('click', abrirAyudaLogin);
+  $('#login-step-back').addEventListener('click', () => setLoginStep('user'));
 
   $('#form-register').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -123,6 +171,13 @@ function setupAuth() {
 
   $('#form-login').addEventListener('submit', async (e) => {
     e.preventDefault();
+    // Paso 1 (Usuario): el botón "Verificar" solo avanza al paso Key, no inicia sesión todavía.
+    if (!$('#login-step-key').classList.contains('active')) {
+      const username = $('#log-user').value.trim();
+      if (!username) { $('#log-user').focus({ preventScroll: true }); return; }
+      setLoginStep('key');
+      return;
+    }
     const username = $('#log-user').value.trim(), pass = $('#log-pass').value, err = $('#log-error');
     try {
       const auth = await api.post('/api/auth/login', { username, password: pass });
@@ -165,6 +220,6 @@ async function enviarRecuperacion() {
   if (!CLAVE_USUARIO_REGEX.test(newPassword)) { err.textContent = 'La nueva clave debe tener exactamente 6 dígitos.'; return; }
   try {
     await api.post('/api/auth/recuperar', { username, recoveryCode, newPassword });
-    closeModal(); toast('Clave actualizada. Ya puedes iniciar sesión.'); setAuthMode('login'); $('#log-user').value = username;
+    closeModal(); toast('Clave actualizada. Ya puedes iniciar sesión.'); setAuthMode('login'); $('#log-user').value = username; setLoginStep('key');
   } catch (ex) { err.textContent = ex.message; }
 }
