@@ -17,6 +17,7 @@ router.get('/trabajo/:empleadoId', ah(trabajo.obtenerSnapshot));
 router.post('/trabajo/:empleadoId/turnos', ah(trabajo.crearTurno));
 router.patch('/trabajo/turnos/:turnoId', bloquearCambioJefe, bloquearTrabajoCongelado, ah(trabajo.actualizarTurno));
 router.patch('/trabajo/turnos/:turnoId/pago-empleado', bloquearPagoEmpleadoFinalizado, bloquearTrabajoCongelado, ah(trabajoPago.actualizarPagoEmpleado));
+router.patch('/trabajo/turnos/:turnoId/permiso-agenda', ah(trabajo.actualizarPermisoAgenda));
 router.post('/trabajo/turnos/:turnoId/congelar', ah(trabajoCongelado.congelarTrabajo));
 router.post('/trabajo/turnos/:turnoId/finalizar', ah(trabajo.finalizarTurno));
 router.delete('/trabajo/turnos/:turnoId', ah(trabajo.eliminarTurno));
