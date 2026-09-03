@@ -90,7 +90,17 @@ function aplicarUIAuth() {
   const toggle = $('#auth-toggle');
   if (toggle) toggle.textContent = 'Crear nueva cuenta';
   const regUser = $('#reg-user');
-  if (regUser) regUser.placeholder = '';
+  if (regUser) {
+    regUser.placeholder = '';
+    regUser.removeAttribute('maxlength');
+    regUser.removeAttribute('minlength');
+    if (regUser.dataset.usernameFilter !== '1') {
+      regUser.dataset.usernameFilter = '1';
+      regUser.addEventListener('input', () => {
+        regUser.value = (regUser.value || '').replace(/[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ]/g, '');
+      });
+    }
+  }
   const regTitle = $('#auth-title');
   if (regTitle && $('#form-register') && !$('#form-register').classList.contains('hidden')) regTitle.textContent = 'Crear usuario';
 }
