@@ -5,7 +5,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, '..', '..', 'data', 'db.json');
+// En desarrollo/producción conserva la ruta actual. Los tests pueden
+// inyectar otra ruta para no tocar la base real de data/db.json.
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', '..', 'data', 'db.json');
 const MONGODB_URI = process.env.MONGODB_URI || '';
 const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'riverospay';
 
