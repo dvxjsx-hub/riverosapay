@@ -40,22 +40,39 @@
       <p id="auth-sub" class="muted">Bienvenido a Riverosapay</p>
 
       <form id="form-register" class="auth-form">
-        <label>Usuario
+        <div class="login-step active" id="reg-step-user">
+          <label class="login-step-label" for="reg-user">Usuario</label>
           <input id="reg-user" type="text" placeholder="Eje. riverojs" autocomplete="username" maxlength="10" required>
-        </label>
-        <p class="field-hint"> </p>
-        <label>Contraseña
-          <input id="reg-pass" type="password" placeholder="6 a 12 caracteres" autocomplete="new-password" minlength="6" maxlength="12" required>
-        </label>
-        <label>Confirmar contraseña
-          <input id="reg-pass2" type="password" placeholder="Repite la contraseña" autocomplete="new-password" minlength="6" maxlength="12" required>
-        </label>
-        <p class="field-hint"> </p>
-        <div class="notice-box">
-          <b>Importante:</b> guarda muy bien tu contraseña. Al crear la cuenta obtendras un código de recuperación de una sola vez — sin él no vas a poder recuperar el acceso.
         </div>
+
+        <div class="login-step" id="reg-step-pass">
+          <label class="login-step-label" for="reg-pass">Contraseña</label>
+          <div class="clave6-wrap">
+            <input id="reg-pass" type="password" autocomplete="new-password" required>
+          </div>
+        </div>
+
+        <div class="login-step" id="reg-step-pass2">
+          <label class="login-step-label" for="reg-pass2">Confirmar contraseña</label>
+          <div class="clave6-wrap">
+            <input id="reg-pass2" type="password" autocomplete="new-password" required>
+          </div>
+          <div class="notice-box">
+            <b>Importante:</b> guarda muy bien tu contraseña. Al crear la cuenta obtendras un código de recuperación de una sola vez — sin él no vas a poder recuperar el acceso.
+          </div>
+        </div>
+
         <p class="field-error" id="reg-error"></p>
-        <button type="submit" class="btn-primary">Crear cuenta</button>
+
+        <div class="step-nav" id="reg-nav">
+          <button type="button" id="reg-back" class="step-arrow-btn hidden" aria-label="Atrás">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+          </button>
+          <button type="submit" id="reg-next" class="step-arrow-btn" aria-label="Siguiente">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
+          <button type="submit" id="reg-submit" class="btn-primary hidden">CREAR CUENTA</button>
+        </div>
       </form>
 
       <form id="form-login" class="auth-form hidden">
