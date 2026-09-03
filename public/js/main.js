@@ -97,7 +97,7 @@ function aplicarUIAuth() {
     if (regUser.dataset.usernameFilter !== '1') {
       regUser.dataset.usernameFilter = '1';
       regUser.addEventListener('input', () => {
-        regUser.value = (regUser.value || '').replace(/[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ]/g, '');
+        regUser.value = (regUser.value || '').replace(/[^a-zA-Z]/g, '');
       });
     }
   }
