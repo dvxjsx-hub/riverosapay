@@ -1,6 +1,7 @@
 /* ============================================================
    Riverospay · ENTRADA A LA APP Y HOME
-   Tanda 6: Inicio = selección de menú.
+   El INICIO es solo bienvenida. El contenido funcional vive en
+   Organizador.
    ============================================================ */
 
 function enterApp() {
@@ -8,20 +9,14 @@ function enterApp() {
   configurarMenuPorRol();
   showScreen('screen-app');
 
-  const modo = modoActualUsuario();
-
-  if (modo === 'empleado') {
-    STATE.viewMode = 'empleado';
-    $('#tab-estudio').classList.toggle('hidden', STATE.user.esEstudiante === false);
-    $all('.tab').forEach(b => b.classList.remove('active'));
-    STATE.activeTab = null;
-    renderHome();
-    checkPendingRequests();
-  } else {
-    STATE.viewMode = 'jefe-historial';
-    STATE.jefeView = null;
-    loadHistorial();
-  }
+  // Inicio limpio: nunca muestra Trabajo/Estudio/Evento directamente.
+  $('#tabbar').classList.add('hidden');
+  $all('.tab').forEach(b => b.classList.remove('active'));
+  STATE.activeTab = null;
+  STATE.viewMode = modoActualUsuario() === 'jefe' ? 'jefe-home' : 'empleado';
+  STATE.jefeView = null;
+  renderHome();
+  if (modoActualUsuario() === 'empleado') checkPendingRequests();
 }
 
 async function checkPendingRequests() {
@@ -34,24 +29,19 @@ async function checkPendingRequests() {
 }
 
 function renderHome() {
+  const modo = modoActualUsuario();
+  const titulo = modo === 'jefe' ? 'Bienvenido, estás en modo BOSS' : 'Bienvenido, estás en modo EMPLEADO';
   $('#content').innerHTML = `
     <div class="empty-card" style="text-align:center;">
       <div class="empty-icon">${ICONS.home}</div>
-      <h2 style="font-size:20px;margin:6px 0;">Selección de menú</h2>
-      <p class="muted">Selecciona un menú para continuar.</p>
-      <div style="display:grid;gap:10px;margin-top:18px;">
-        <button class="btn-primary" type="button" onclick="seleccionarOrganizador('trabajo')">Trabajo</button>
-        <button class="btn-secondary" type="button" onclick="seleccionarOrganizador('estudio')">Estudio</button>
-        <button class="btn-secondary" type="button" onclick="seleccionarOrganizador('evento')">Evento</button>
-      </div>
+      <h2 style="font-size:20px;margin:6px 0;">${titulo}</h2>
+      <p class="muted">Selecciona <b>Organizador</b> en el menú para gestionar tu información.</p>
     </div>`;
 }
 
 function setupTabs() {
   $all('.tab').forEach(btn => {
     btn.addEventListener('click', () => {
-      // Si alguna vista BOSS reutiliza las pestañas por error, nunca debe
-      // abrir Estudio o Evento desde un contexto restringido.
       if (STATE.viewMode === 'jefe-ver') {
         if (btn.dataset.tab !== 'trabajo') {
           toast('En el perfil de un empleado solo puedes consultar Trabajo por ahora.');
