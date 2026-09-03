@@ -110,25 +110,63 @@ async function cambiarModoCuenta(modo) {
 
 function openConfiguracion() {
   const esEmpleado = modoActualUsuario() === 'empleado';
-  const estudianteTexto = STATE.user.esEstudiante === true ? 'Estudio activado' : 'Estudio desactivado';
+  const estudianteActivo = STATE.user.esEstudiante === true;
   const nombre = STATE.user.nombreCompleto || 'No configurado';
 
+  const estudioItem = esEmpleado ? `
+    <button class="settings-item" type="button" onclick="abrirSesionAcademica()">
+      <span class="settings-icon">${ICONS.estudio}</span>
+      <span class="settings-label">Sesión académica<span class="settings-value">${estudianteActivo ? 'Activada' : 'Desactivada'}</span></span>
+      <span class="settings-chevron">${ICONS.chevron}</span>
+    </button>` : '';
+
   openModal('Configuración', `
-    <div style="display:grid;gap:10px;">
-      <div class="detail-row"><span>Usuario</span><span>${escapeHtml(STATE.user.username)}</span></div>
-      <div class="detail-row"><span>Nombre</span><span>${escapeHtml(nombre)}</span></div>
-      <button class="btn-secondary" style="width:100%;" onclick="renderNombreFormulario('perfil')">${STATE.user.nombreCompleto ? 'Cambiar nombre' : 'Configurar nombre'}</button>
+    <div class="detail-row"><span>Usuario</span><span>${escapeHtml(STATE.user.username)}</span></div>
+    <div class="detail-row"><span>Nombre</span><span>${escapeHtml(nombre)}</span></div>
 
-      ${esEmpleado ? `
-        <button class="btn-secondary" style="width:100%;" onclick="abrirSesionAcademica()">${estudianteTexto}</button>
-      ` : `
-        <div class="notice-box" style="margin:0;">La <b>Sesión académica</b> se configura desde MODO EMPLEADO.</div>
-      `}
+    <div>
+      <p class="settings-group-label">Cuenta</p>
+      <div class="settings-list">
+        <button class="settings-item" type="button" onclick="renderNombreFormulario('perfil')">
+          <span class="settings-icon">${ICONS.user}</span>
+          <span class="settings-label">${STATE.user.nombreCompleto ? 'Cambiar nombre' : 'Configurar nombre'}</span>
+          <span class="settings-chevron">${ICONS.chevron}</span>
+        </button>
+        ${estudioItem}
+      </div>
+      ${esEmpleado ? '' : '<div class="notice-box" style="margin-top:8px;">La <b>Sesión académica</b> se configura desde MODO EMPLEADO.</div>'}
+    </div>
 
-      <button class="btn-secondary" style="width:100%;" onclick="abrirCambiarClave()">Cambiar clave</button>
-      <button class="btn-secondary" style="width:100%;" onclick="abrirCodigoRecuperacion()">Código de recuperación</button>
-      <button class="btn-secondary" style="width:100%;" onclick="openInformacion()">Información de Riverosapay</button>
-      <button class="btn-ghost-danger" style="width:100%;margin-top:4px;" onclick="pedirConfirmacionEliminarCuenta()">Eliminar cuenta</button>
+    <div>
+      <p class="settings-group-label">Seguridad</p>
+      <div class="settings-list">
+        <button class="settings-item" type="button" onclick="abrirCambiarClave()">
+          <span class="settings-icon">${ICONS.key}</span>
+          <span class="settings-label">Cambiar clave</span>
+          <span class="settings-chevron">${ICONS.chevron}</span>
+        </button>
+        <button class="settings-item" type="button" onclick="abrirCodigoRecuperacion()">
+          <span class="settings-icon">${ICONS.shield}</span>
+          <span class="settings-label">Código de recuperación</span>
+          <span class="settings-chevron">${ICONS.chevron}</span>
+        </button>
+      </div>
+    </div>
+
+    <div>
+      <p class="settings-group-label">Riverosapay</p>
+      <div class="settings-list">
+        <button class="settings-item" type="button" onclick="openInformacion()">
+          <span class="settings-icon">${ICONS.info}</span>
+          <span class="settings-label">Información de Riverosapay</span>
+          <span class="settings-chevron">${ICONS.chevron}</span>
+        </button>
+        <button class="settings-item danger" type="button" onclick="pedirConfirmacionEliminarCuenta()">
+          <span class="settings-icon">${ICONS.trash}</span>
+          <span class="settings-label">Eliminar cuenta</span>
+          <span class="settings-chevron">${ICONS.chevron}</span>
+        </button>
+      </div>
     </div>
   `);
 }
