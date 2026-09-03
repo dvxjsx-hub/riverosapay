@@ -200,7 +200,11 @@ function openTurnoDetail(turnoId) {
       ? `<div class="notice-box">Trabajo congelado. Ya no admite cambios.</div>`
       : `<button class="btn-secondary" style="width:100%;" onclick="congelarTrabajo('${turno.id}')">Congelar trabajo</button>`)
     : '';
-  const eliminarHtml = !turno.eliminacionPendiente ? `<button class="btn-ghost-danger" style="width:100%;" onclick="pedirConfirmacionEliminar('${turno.id}')">Eliminar trabajo</button>` : `<div class="notice-box">Solicitud de eliminación pendiente.</div>`;
+  const eliminarHtml = turno.eliminacionPendiente
+    ? (isJefe
+      ? `<div class="notice-box">El empleado solicita eliminar este trabajo.</div><div class="notif-actions" style="display:flex;gap:8px;margin-top:10px;"><button class="btn-secondary" type="button" onclick="rechazarEliminacionPendiente('${turno.id}')">Rechazar</button><button class="btn-ghost-danger" type="button" onclick="confirmarEliminacionPendiente('${turno.id}')">Confirmar eliminación</button></div>`
+      : `<div class="notice-box">Solicitud de eliminación pendiente.</div>`)
+    : `<button class="btn-ghost-danger" style="width:100%;" onclick="pedirConfirmacionEliminar('${turno.id}')">Eliminar trabajo</button>`;
   openModal('Detalle del trabajo', `<div class="detail-row"><span>Lugar</span><span>${escapeHtml(lugar ? lugar.nombre : '—')}</span></div><div class="detail-row"><span>Fecha</span><span>${turno.fecha ? escapeHtml(formatearFechaTrabajo(turno.fecha)) : escapeHtml(turno.dia || '—')}</span></div><div class="detail-row"><span>Hora</span><span>${escapeHtml(turno.horaInicio)} – ${escapeHtml(turno.horaFin)}</span></div><div><p class="muted" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin:0 0 6px;">Descripción</p><p style="margin:0;font-size:14px;">${turno.descripcion ? escapeHtml(turno.descripcion) : 'Sin descripción.'}</p></div>${jefeHtml}${valorHtml}${estadoHtml}${congeladoHtml}${eliminarHtml}`);
 }
 
