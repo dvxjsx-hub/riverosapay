@@ -1,9 +1,37 @@
 /* ============================================================
    Riverosapay · NAVEGACION: pantallas, modal, drawer, menú por modo.
    ============================================================ */
-function showScreen(id) { $all('.screen').forEach(s => s.classList.remove('active')); $('#' + id).classList.add('active'); }
-function openModal(title, bodyHtml) { $('#modal-title').textContent = title; $('#modal-body').innerHTML = bodyHtml; $('#modal-overlay').classList.add('open'); $('#modal').classList.add('open'); setTimeout(() => { const first = $('#modal-body').querySelector('input:not([disabled]), textarea:not([disabled]), select:not([disabled])'); if (first) first.focus({ preventScroll: true }); }, 50); }
-function closeModal() { $('#modal-overlay').classList.remove('open'); $('#modal').classList.remove('open'); }
+let modalFocusTimer = null;
+
+function showScreen(id) { $all('.screen').forEach(s => s.classList.remove('active')); const screen = $('#' + id); if (screen) screen.classList.add('active'); }
+
+function openModal(title, bodyHtml) {
+  clearTimeout(modalFocusTimer);
+  $('#modal-title').textContent = title;
+  $('#modal-body').innerHTML = bodyHtml;
+  $('#modal-overlay').classList.add('open');
+  $('#modal').classList.add('open');
+
+  // En móviles, un foco programado puede llegar después del toque del usuario
+  // y robar el teclado al campo que acaba de seleccionar. Solo enfocamos
+  // automáticamente si el usuario todavía no ha interactuado con otro control.
+  modalFocusTimer = setTimeout(() => {
+    if (!$('#modal').classList.contains('open')) return;
+    const active = document.activeElement;
+    if (active && active !== document.body && active !== document.documentElement) return;
+    const first = $('#modal-body').querySelector('input:not([disabled]), textarea:not([disabled]), select:not([disabled])');
+    if (first) first.focus({ preventScroll: true });
+  }, 80);
+}
+
+function closeModal() {
+  clearTimeout(modalFocusTimer);
+  modalFocusTimer = null;
+  $('#modal-overlay').classList.remove('open');
+  $('#modal').classList.remove('open');
+  if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
+}
+
 function openDrawer() { $('#drawer').classList.add('open'); $('#drawer-overlay').classList.add('open'); }
 function closeDrawer() { $('#drawer').classList.remove('open'); $('#drawer-overlay').classList.remove('open'); }
 
