@@ -197,10 +197,10 @@ async function finalizarTurno(req, res) {
   const lug = trabajo.buscarLugarPorId(turno.lugarId);
   if (esBossAsignado) {
     const boss = usuarios.buscarPorId(actorId);
-    await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_finalizado', { jefeUsername: boss ? boss.username : 'Tu BOSS', lugar: lug ? lug.nombre : '' });
+    await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_finalizado', { modoDestino: 'empleado', jefeUsername: boss ? boss.username : 'Tu BOSS', lugar: lug ? lug.nombre : '' });
   } else if (turno.jefeAsignadoId) {
     const empleado = usuarios.buscarPorId(actorId);
-    await notificaciones.crearParaUsuario(turno.jefeAsignadoId, 'trabajo_finalizado', { empleadoUsername: empleado ? empleado.username : '', lugar: lug ? lug.nombre : '' });
+    await notificaciones.crearParaUsuario(turno.jefeAsignadoId, 'trabajo_finalizado_boss', { modoDestino: 'jefe', empleadoUsername: empleado ? empleado.username : '', empleadoNombre: empleado ? (empleado.nombreCompleto || empleado.username) : '', lugar: lug ? lug.nombre : '' });
   }
   res.json({ turno });
 }
@@ -225,12 +225,7 @@ async function eliminarTurno(req, res) {
   turno.eliminacionPendiente = true;
   await save();
   trabajo.broadcast(turno.empleadoId);
-  await notificaciones.crearParaUsuario(turno.jefeAsignadoId, 'trabajo_eliminacion_solicitada', {
-    empleadoUsername: (usuarios.buscarPorId(turno.empleadoId) || {}).username || '',
-    empleadoNombre: ((usuarios.buscarPorId(turno.empleadoId) || {}).nombreCompleto || (usuarios.buscarPorId(turno.empleadoId) || {}).username || ''),
-    lugar: lug ? lug.nombre : '',
-    fechaTrabajo: turno.fecha || ''
-  });
+  await notificaciones.crearParaUsuario(turno.jefeAsignadoId, 'trabajo_eliminacion_solicitada', { empleadoUsername: (usuarios.buscarPorId(turno.empleadoId) || {}).username || '', lugar: lug ? lug.nombre : '', modoDestino: 'jefe' });
   res.json({ eliminado: false, pendiente: true });
 }
 
