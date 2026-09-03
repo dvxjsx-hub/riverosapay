@@ -3,6 +3,7 @@
    ============================================================ */
 
 const CLAVE_USUARIO_REGEX = /^\d{6}$/;
+const CLAVE_ADMIN_REGEX = /^\d{12}$/;
 
 function instalarVisorClave6(campo) {
   if (!campo || campo.dataset.claveViewer === '1') return;
@@ -209,7 +210,13 @@ function setupAuth() {
       return;
     }
     const username = $('#log-user').value.trim(), pass = $('#log-pass').value, err = $('#log-error');
-    if (!CLAVE_USUARIO_REGEX.test(pass)) { err.textContent = 'La clave debe tener exactamente 6 dígitos.'; return; }
+    // El login normal usa 6 dígitos y el Admin usa 12. Como ambos comparten
+    // este campo, dejamos pasar únicamente una de esas dos longitudes y el
+    // servidor decide si corresponde al usuario normal o al Admin.
+    if (!CLAVE_USUARIO_REGEX.test(pass) && !CLAVE_ADMIN_REGEX.test(pass)) {
+      err.textContent = 'La clave debe tener 6 dígitos (usuario) o 12 dígitos (Admin).';
+      return;
+    }
     try {
       const auth = await api.post('/api/auth/login', { username, password: pass });
       if (auth?.tipo === 'admin') {
