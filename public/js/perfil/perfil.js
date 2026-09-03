@@ -114,10 +114,10 @@ function openConfiguracion() {
   const nombre = STATE.user.nombreCompleto || 'No configurado';
 
   const estudioItem = esEmpleado ? `
-    <button class="settings-item" type="button" onclick="abrirSesionAcademica()">
+    <button class="settings-item" type="button" onclick="guardarPreferenciaEstudiante(${!estudianteActivo})" aria-label="${estudianteActivo ? 'Desactivar' : 'Activar'} Sesión académica">
       <span class="settings-icon">${ICONS.estudio}</span>
       <span class="settings-label">Sesión académica<span class="settings-value">${estudianteActivo ? 'Activada' : 'Desactivada'}</span></span>
-      <span class="settings-chevron">${ICONS.chevron}</span>
+      <span class="theme-switch ${estudianteActivo ? 'active' : ''}" id="sesion-academica-toggle" role="switch" aria-label="Sesión académica" aria-checked="${estudianteActivo}"><span></span></span>
     </button>` : '';
 
   openModal('Configuración', `
