@@ -12,6 +12,10 @@ async function actualizarPagoEmpleado(req, res) {
   const actorId = usuarioActual(req);
   if (actorId !== turno.empleadoId) return res.status(403).json({ error: 'Solo el empleado propietario puede registrar su pago.' });
 
+  if (turno.jefeAsignadoId) return res.status(403).json({ error: 'Este trabajo tiene un BOSS asignado. Solo el BOSS puede modificar el pago.' });
+  if (turno.finalizado === true) return res.status(409).json({ error: 'Este trabajo ya finalizó y el pago no puede ser editado por el empleado.' });
+  if (turno.congelado === true) return res.status(409).json({ error: 'Este trabajo está congelado y ya no admite cambios.' });
+
   const body = req.body || {};
   if (Object.prototype.hasOwnProperty.call(body, 'jefeAsignadoId')) return res.status(400).json({ error: 'El jefe asignado no puede modificarse después de crear el trabajo.' });
   if (body.valor === undefined && typeof body.pagado !== 'boolean') return res.status(400).json({ error: 'Indica el valor o el estado de pago que quieres actualizar.' });
