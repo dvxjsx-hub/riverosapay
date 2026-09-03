@@ -254,7 +254,7 @@ function setupAuth() {
     }
     const username = $('#log-user').value.trim().toLowerCase(), pass = $('#log-pass').value, err = $('#log-error');
     if (!CLAVE_USUARIO_REGEX.test(pass) && !CLAVE_ADMIN_REGEX.test(pass)) {
-      err.textContent = 'La clave debe tener 6 dígitos (usuario) o 12 dígitos (Admin).';
+      err.textContent = 'La clave debe tener 6 dígitos.';
       return;
     }
     try {
