@@ -20,7 +20,8 @@ const EMPTY_DB = {
   eventos: [],
   joinRequests: [],
   links: [],
-  notificaciones: []
+  notificaciones: [],
+  trabajoSolicitudes: []
 };
 
 const db = JSON.parse(JSON.stringify(EMPTY_DB));
@@ -31,6 +32,7 @@ function hidratar(source) {
   Object.keys(db).forEach(k => delete db[k]);
   Object.assign(db, JSON.parse(JSON.stringify(EMPTY_DB)), source || {});
   if (!Array.isArray(db.amistadSolicitudes)) db.amistadSolicitudes = [];
+  if (!Array.isArray(db.trabajoSolicitudes)) db.trabajoSolicitudes = [];
 }
 
 function cargarDesdeArchivo() {
