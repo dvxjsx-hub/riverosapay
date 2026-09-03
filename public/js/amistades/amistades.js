@@ -35,8 +35,12 @@ async function cargarAmistades() {
       <button class="btn-secondary" style="width:auto;padding:8px 14px;" type="button" onclick="copiarTexto('${escapeHtml(codigo)}')">Copiar código</button>
       <small class="muted">Comparte este código para recibir solicitudes.</small>
     </div>
-    <button class="btn-primary" style="width:100%;" type="button" onclick="abrirAgregarAmistad()">${ICONS.plus} Añadir amistad</button>
-    ${solicitudes}<div style="display:flex;flex-direction:column;gap:8px;">${lista}</div>`;
+    ${solicitudes}
+    <div class="section-head">
+      <h3>Tus amistades</h3>
+      <button class="btn-icon" type="button" onclick="abrirAgregarAmistad()" aria-label="Añadir amistad">${ICONS.plus}</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">${lista}</div>`;
 }
 
 function abrirAgregarAmistad() {
