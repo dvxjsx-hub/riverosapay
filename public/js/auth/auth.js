@@ -46,7 +46,7 @@ function configurarCamposClave6() {
     login.removeAttribute('maxlength');
     login.removeAttribute('minlength');
     login.autocomplete = 'off';
-    login.placeholder = '6 dígitos';
+    login.placeholder = 'Ingresa tu clave';
     if (login.dataset.authDigitsConfigured !== '1') {
       login.dataset.authDigitsConfigured = '1';
       login.addEventListener('input', () => { login.value = (login.value || '').replace(/\D/g, ''); });
@@ -146,11 +146,11 @@ function setAuthMode(mode) {
   const isLogin = mode === 'login';
   $('#form-register').classList.toggle('hidden', isLogin);
   $('#form-login').classList.toggle('hidden', !isLogin);
-  $('#auth-title').textContent = isLogin ? '¡Bienvenido de nuevo!' : 'CREAR CUENTA';
-  $('#auth-sub').textContent = isLogin ? 'Inicia sesión en Riverosapay' : '¡Welcome to Riverosapay!';
-  $('#auth-toggle').textContent = isLogin ? '¿No tienes cuenta? Crear nueva cuenta' : '¿Ya tienes cuenta? Iniciar sesión';
+  $('#auth-title').textContent = isLogin ? 'Iniciar sesión' : 'Crear usuario';
+  $('#auth-sub').textContent = '';
+  $('#auth-toggle').textContent = isLogin ? 'Crear nueva cuenta' : 'Iniciar sesión';
   $('#auth-toggle').dataset.next = isLogin ? 'register' : 'login';
-  $('#auth-toggle').classList.add('hidden');
+  $('#auth-toggle').classList.remove('hidden');
   $('#auth-reset').classList.add('hidden');
   $('#auth-help').classList.remove('hidden');
   $('#reg-error').textContent = '';
@@ -166,7 +166,6 @@ function abrirAyudaLogin() {
     <button type="button" class="help-sheet-item" onclick="closeModal(); abrirRecuperarContrasena();">Olvidé mi contraseña</button>
     <button type="button" class="help-sheet-item" onclick="closeModal(); setAuthMode('register');">Crear nueva cuenta</button>
     <button type="button" class="help-sheet-item" onclick="closeModal(); openInformacion();">Información</button>
-    <button type="button" class="help-sheet-item" onclick="closeModal(); $('#auth-reset').click();">Olvidar este dispositivo</button>
   `);
 }
 
