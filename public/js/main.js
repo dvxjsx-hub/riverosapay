@@ -61,9 +61,6 @@ function nombreJefePorId(id) {
   return a ? (a.nombreCompleto || a.username) : null;
 }
 
-/* ============================================================
-   TANDA 5 — ajustes de interfaz y seguridad de Trabajo.
-   ============================================================ */
 function normalizarTextoBossEnModal(pares) {
   const title = $('#modal-title'); if (title) { const original = title.textContent.trim(); const reemplazo = pares[original]; if (reemplazo) title.textContent = reemplazo; }
   const body = $('#modal-body'); if (!body) return; const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT); const nodos = []; let node;
@@ -81,9 +78,6 @@ const _abrirCambiarJefeT5 = typeof abrirCambiarJefe === 'function' ? abrirCambia
 const _setPagadoT5 = typeof setPagado === 'function' ? setPagado : null; if (_setPagadoT5) setPagado = async function(turnoId, pagado) { try { await api.patch(`/api/trabajo/turnos/${turnoId}`, { pagado, actorJefeId: STATE.user.id, actorJefeUsername: STATE.user.username }); toast(pagado ? 'Marcado como pagado' : 'Marcado como no pagado'); await refrescarJefeTrabajo(); openTurnoDetail(turnoId); } catch (ex) { toast(ex.message); } };
 const _guardarValorT5 = typeof guardarValor === 'function' ? guardarValor : null; if (_guardarValorT5) guardarValor = async function(turnoId) { const raw = $('#f-valor')?.value; try { await api.patch(`/api/trabajo/turnos/${turnoId}`, { valor: raw === '' ? null : Number(raw), actorJefeId: STATE.user.id, actorJefeUsername: STATE.user.username }); toast('Valor guardado'); await refrescarJefeTrabajo(); openTurnoDetail(turnoId); } catch (ex) { toast(ex.message); } };
 
-/* ============================================================
-   AJUSTES AUTH — interfaz solicitada, sin alterar la lógica.
-   ============================================================ */
 function aplicarUIAuth() {
   const sub = $('#auth-sub');
   if (sub) sub.textContent = '';
