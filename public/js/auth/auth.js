@@ -1,5 +1,5 @@
 /* ============================================================
-   Riverospay · AUTENTICACION: splash, login/registro, recuperar contraseña
+   Riverosapay · AUTENTICACION: splash, login/registro, recuperar contraseña
    ============================================================ */
 
 const CLAVE_USUARIO_REGEX = /^\d{6}$/;
@@ -37,7 +37,6 @@ function configurarCamposClave6() {
   });
 
   // El login es compartido con Admin: NO poner maxlength aquí.
-  // Usuario normal: exactamente 6 dígitos. Admin: puede continuar hasta su clave completa.
   const login = $('#log-pass');
   if (login) {
     login.inputMode = 'numeric';
@@ -57,7 +56,16 @@ function goToAuth() {
   if (lastUser) { setAuthMode('login'); $('#log-user').value = lastUser; }
   else setAuthMode('register');
   configurarCamposClave6();
-  setTimeout(() => { const campo = lastUser ? $('#log-user') : $('#reg-user'); campo?.focus({ preventScroll: true }); }, 80);
+
+  // No robar el foco al usuario durante la transición a login/registro.
+  setTimeout(() => {
+    const campo = lastUser ? $('#log-user') : $('#reg-user');
+    if (!campo) return;
+    const active = document.activeElement;
+    if (active && active !== document.body && active !== document.documentElement) return;
+    if (!$('#screen-auth').classList.contains('active')) return;
+    campo.focus({ preventScroll: true });
+  }, 80);
 }
 
 function setAuthMode(mode) {
@@ -91,7 +99,11 @@ function setupAuth() {
   $('#auth-reset').addEventListener('click', () => {
     localStorage.removeItem('riverospay_last_user');
     $('#form-register').reset(); $('#form-login').reset(); setAuthMode('register');
-    setTimeout(() => $('#reg-user')?.focus({ preventScroll: true }), 50);
+    setTimeout(() => {
+      const campo = $('#reg-user');
+      const active = document.activeElement;
+      if (campo && (!active || active === document.body || active === document.documentElement)) campo.focus({ preventScroll: true });
+    }, 50);
   });
   $('#auth-olvide').addEventListener('click', (e) => { e.preventDefault(); abrirRecuperarContrasena(); });
 
@@ -113,8 +125,6 @@ function setupAuth() {
     e.preventDefault();
     const username = $('#log-user').value.trim(), pass = $('#log-pass').value, err = $('#log-error');
     try {
-      // No validamos aquí a 6 caracteres: Admin puede usar una clave distinta.
-      // El backend decide si corresponde a Admin o a un usuario normal.
       const auth = await api.post('/api/auth/login', { username, password: pass });
       if (auth?.tipo === 'admin') {
         localStorage.removeItem('riverospay_last_user');
