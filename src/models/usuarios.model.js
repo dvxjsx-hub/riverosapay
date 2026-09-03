@@ -37,6 +37,7 @@ function publicUser(u) {
     esEstudiante: u.esEstudiante === undefined ? null : u.esEstudiante,
     recibirNotificaciones: u.recibirNotificaciones === undefined ? null : u.recibirNotificaciones,
     codigoAmistad: u.codigoAmistad || null,
+    verificada: u.verificada === true,
     shareCode: u.role === 'empleado' ? u.shareCode : undefined
   };
 }
