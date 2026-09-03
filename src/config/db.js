@@ -23,7 +23,10 @@ const EMPTY_DB = {
   joinRequests: [],
   links: [],
   notificaciones: [],
-  trabajoSolicitudes: []
+  trabajoSolicitudes: [],
+  tesorerias: [],
+  tesoreriaSolicitudes: [],
+  tesoreriaMovimientos: []
 };
 
 const db = JSON.parse(JSON.stringify(EMPTY_DB));
@@ -35,6 +38,9 @@ function hidratar(source) {
   Object.assign(db, JSON.parse(JSON.stringify(EMPTY_DB)), source || {});
   if (!Array.isArray(db.amistadSolicitudes)) db.amistadSolicitudes = [];
   if (!Array.isArray(db.trabajoSolicitudes)) db.trabajoSolicitudes = [];
+  if (!Array.isArray(db.tesorerias)) db.tesorerias = [];
+  if (!Array.isArray(db.tesoreriaSolicitudes)) db.tesoreriaSolicitudes = [];
+  if (!Array.isArray(db.tesoreriaMovimientos)) db.tesoreriaMovimientos = [];
 }
 
 function cargarDesdeArchivo() {
