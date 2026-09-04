@@ -14,7 +14,7 @@ function renderHistorial() {
       <span class="historial-avatar">${escapeHtml((l.empleadoNombre || l.empleadoUsername || '?').slice(0, 1).toUpperCase())}</span>
       <span class="historial-info">
         <div class="historial-nombre">${escapeHtml(l.empleadoNombre || l.empleadoUsername)}</div>
-        <div class="historial-fecha">${l.turnos.length} trabajo${l.turnos.length === 1 ? '' : 's'} asignado${l.turnos.length === 1 ? '' : 's'}</div>
+        <div class="historial-fecha">${l.turnos.length} trabajo${l.turnos.length === 1 ? '' : 's'} asignado${l.turnos.length === 1 ? '' : 's'}${l.empleadoTipo === 'personal' ? ' · Personalizado' : ''}</div>
       </span>
     </button>`).join('');
 
@@ -22,52 +22,102 @@ function renderHistorial() {
     <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
       <button class="trabajo-plus" style="width:56px;height:56px;border-radius:50%;border:none;background:var(--green-700);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-card);cursor:pointer;" type="button" onclick="openBossAddTrabajo()" aria-label="Añadir trabajo">${ICONS.plus}</button>
     </div>
-    ${cards || emptyCardHTML('ORGANIZADOR BOSS', 'Aún no tienes trabajos aceptados por tus amistades.', 'historial')}`;
+    ${cards || emptyCardHTML('ORGANIZADOR BOSS', 'Aún no tienes trabajos asignados.', 'historial')}`;
 }
 
 async function openBossAddTrabajo() {
   let amistades = [];
+  let personales = [];
   try {
-    const data = await api.get(`/api/amistades/${STATE.user.id}`);
-    amistades = data.amistades || [];
+    const [amistadesData, personalesData] = await Promise.all([
+      api.get(`/api/amistades/${STATE.user.id}`),
+      api.get(`/api/trabajo/jefe/${STATE.user.id}/personal`)
+    ]);
+    amistades = amistadesData.amistades || [];
+    personales = personalesData.trabajadores || [];
   } catch (ex) { toast(ex.message); return; }
-  if (!amistades.length) {
-    openModal('Añadir trabajo', '<p class="muted">Primero necesitas tener al menos una amistad para poder enviarle un trabajo.</p><button class="btn-secondary" type="button" onclick="closeModal()">Cerrar</button>');
-    return;
-  }
 
-  const opciones = amistades.map(a => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.nombreCompleto || a.username)}</option>`).join('');
-  openModal('Enviar trabajo', `
-    <label>Enviar a amistad<select id="boss-f-trabajo-amigo">${opciones}</select></label>
+  const opcionesAmistad = amistades.map(a => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.nombreCompleto || a.username)}</option>`).join('');
+  const opcionesPersonal = personales.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.nombre)}</option>`).join('');
+  const tieneDestinos = amistades.length || personales.length;
+
+  openModal('Añadir trabajo', `
+    <label>Tipo de empleado<select id="boss-f-trabajo-tipo" onchange="cambiarTipoEmpleadoBoss()">
+      ${amistades.length ? '<option value="amistad">Amistad con cuenta</option>' : ''}
+      <option value="personal">Personalizado</option>
+    </select></label>
+    <div id="boss-f-trabajo-destino-wrap">
+      ${amistades.length ? `<label>Enviar a amistad<select id="boss-f-trabajo-amigo">${opcionesAmistad}</select></label>` : `<label>Nombre de referencia<input id="boss-f-trabajo-nombre" type="text" maxlength="80" placeholder="Ej. Carlos" required></label>`}
+    </div>
+    <div id="boss-f-trabajo-nuevo-personal" style="display:none;">
+      <label>Nombre de referencia<input id="boss-f-trabajo-nombre" type="text" maxlength="80" placeholder="Ej. Carlos" required></label>
+    </div>
+    <div id="boss-f-trabajo-personal-existente" style="display:none;">
+      <label>Trabajador personalizado<select id="boss-f-trabajo-personal">${opcionesPersonal}</select></label>
+    </div>
     <label>Lugar<input id="boss-f-trabajo-lugar" type="text" placeholder="Ej. Manga - Fontana" required></label>
     <label>Fecha<input id="boss-f-trabajo-fecha" type="date" required></label>
     <div class="row-2"><label>Hora inicio<input id="boss-f-trabajo-hi" type="time" required></label><label>Hora fin<input id="boss-f-trabajo-hf" type="time" required></label></div>
     <label>Descripción (opcional)<textarea id="boss-f-trabajo-desc" placeholder="Notas sobre este trabajo..."></textarea>
     <p class="field-error" id="boss-f-trabajo-error"></p>
-    <button class="btn-primary" type="button" onclick="submitBossTrabajo()">Enviar trabajo</button>`);
+    <button class="btn-primary" type="button" onclick="submitBossTrabajo()">${tieneDestinos ? 'Añadir trabajo' : 'Crear trabajador y añadir trabajo'}</button>`);
   const fecha = $('#boss-f-trabajo-fecha');
   if (fecha && typeof fechaLocalISO === 'function') fecha.value = fechaLocalISO();
+  cambiarTipoEmpleadoBoss();
+}
+
+function cambiarTipoEmpleadoBoss() {
+  const tipo = $('#boss-f-trabajo-tipo')?.value || 'personal';
+  const wrap = $('#boss-f-trabajo-destino-wrap');
+  const nuevo = $('#boss-f-trabajo-nuevo-personal');
+  const existente = $('#boss-f-trabajo-personal-existente');
+  if (!wrap || !nuevo || !existente) return;
+  if (tipo === 'amistad') {
+    wrap.style.display = '';
+    nuevo.style.display = 'none';
+    existente.style.display = 'none';
+  } else {
+    wrap.style.display = 'none';
+    nuevo.style.display = '';
+    existente.style.display = 'none';
+  }
 }
 
 async function submitBossTrabajo() {
-  const empleadoId = $('#boss-f-trabajo-amigo')?.value;
+  const tipo = $('#boss-f-trabajo-tipo')?.value || 'personal';
+  const empleadoId = tipo === 'amistad' ? $('#boss-f-trabajo-amigo')?.value : null;
+  const nombre = tipo === 'personal' ? $('#boss-f-trabajo-nombre')?.value.trim() : '';
   const lugar = $('#boss-f-trabajo-lugar')?.value.trim();
   const fecha = $('#boss-f-trabajo-fecha')?.value;
   const hi = $('#boss-f-trabajo-hi')?.value;
   const hf = $('#boss-f-trabajo-hf')?.value;
   const descripcion = $('#boss-f-trabajo-desc')?.value.trim() || '';
   const err = $('#boss-f-trabajo-error');
-  if (!empleadoId || !lugar || !fecha || !hi || !hf) { if (err) err.textContent = 'Completa amistad, lugar, fecha y horario.'; return; }
+  if ((tipo === 'amistad' && !empleadoId) || (tipo === 'personal' && !nombre) || !lugar || !fecha || !hi || !hf) {
+    if (err) err.textContent = tipo === 'amistad' ? 'Completa amistad, lugar, fecha y horario.' : 'Completa nombre, lugar, fecha y horario.';
+    return;
+  }
   const inicio = new Date(`${fecha}T${hi}`); const fin = new Date(`${fecha}T${hf}`);
   if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime()) || fin <= inicio) { if (err) err.textContent = 'La hora final debe ser posterior a la hora inicial.'; return; }
   try {
-    await api.post(`/api/trabajo/jefe/${STATE.user.id}/solicitudes`, {
-      empleadoId, lugar, fecha,
-      dia: new Intl.DateTimeFormat('es-CO', { weekday: 'long' }).format(new Date(`${fecha}T12:00:00`)),
-      horaInicio: hi, horaFin: hf, descripcion
-    });
-    closeModal();
-    toast('Trabajo enviado. Esperando aceptación.');
+    if (tipo === 'amistad') {
+      await api.post(`/api/trabajo/jefe/${STATE.user.id}/solicitudes`, {
+        empleadoId, lugar, fecha,
+        dia: new Intl.DateTimeFormat('es-CO', { weekday: 'long' }).format(new Date(`${fecha}T12:00:00`)),
+        horaInicio: hi, horaFin: hf, descripcion
+      });
+      closeModal();
+      toast('Trabajo enviado. Esperando aceptación.');
+    } else {
+      await api.post(`/api/trabajo/jefe/${STATE.user.id}/personal`, {
+        nombre, lugar, fecha,
+        dia: new Intl.DateTimeFormat('es-CO', { weekday: 'long' }).format(new Date(`${fecha}T12:00:00`)),
+        horaInicio: hi, horaFin: hf, descripcion
+      });
+      closeModal();
+      await loadHistorial();
+      toast('Trabajador personalizado y trabajo añadidos.');
+    }
   } catch (ex) { if (err) err.textContent = ex.message; }
 }
 
@@ -76,6 +126,7 @@ async function abrirDesdeHistorial(empleadoId) {
   STATE.jefeView = {
     empleadoId,
     empleadoUsername: (found && (found.empleadoNombre || found.empleadoUsername)) || 'Empleado',
+    empleadoTipo: found ? (found.empleadoTipo || 'usuario') : 'usuario',
     lugares: found ? (found.lugares || []) : [],
     turnos: found ? (found.turnos || []) : [],
     materias: [], actividades: [], eventos: [],
@@ -90,7 +141,13 @@ async function abrirDesdeHistorial(empleadoId) {
 
 async function refrescarJefeTrabajo() {
   if (!STATE.jefeView) return;
-  const d = await api.get(`/api/verificar/datos/${STATE.jefeView.empleadoId}?jefeId=${STATE.user.id}`);
+  let d;
+  if (STATE.jefeView.empleadoTipo === 'personal') {
+    d = await api.get(`/api/trabajo/jefe/${STATE.user.id}/personal/${STATE.jefeView.empleadoId}`);
+    d.empleadoUsername = d.trabajador?.nombre || 'Empleado personalizado';
+  } else {
+    d = await api.get(`/api/verificar/datos/${STATE.jefeView.empleadoId}?jefeId=${STATE.user.id}`);
+  }
   STATE.jefeView.lugares = d.lugares;
   STATE.jefeView.turnos = d.turnos;
   if (d.empleadoUsername) STATE.jefeView.empleadoUsername = d.empleadoUsername;
