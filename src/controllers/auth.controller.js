@@ -11,12 +11,12 @@ async function registrar(req, res) {
   if (adminId && uname === adminId) return res.status(409).json({ error: 'Ese usuario está reservado.' });
   if (!PASSWORD_REGEX.test(password || '')) return res.status(400).json({ error: 'La clave debe tener exactamente 6 dígitos.' });
   if (usuarios.existeUsername(uname)) return res.status(409).json({ error: 'Ese usuario ya existe.' });
-
   const recoveryCode = newRecoveryCode();
   const now = new Date().toISOString();
   const user = { id: newId('u'), username: uname, password: await hashPassword(password), role: 'empleado', shareCode: newShareCode(db), modoActual: 'empleado', codigoAmistad: newFriendCode(db), nombreCompleto: null, esEstudiante: true, recoveryCodeHash: hashRecoveryCode(recoveryCode), createdAt: now, lastLoginAt: now };
   usuarios.crear(user); await save();
-  setSessionCookie(res, createSession({ type: 'user', userId: user.id }));
+  const sessionToken = await createSession({ type: 'user', userId: user.id });
+  setSessionCookie(res, sessionToken);
   res.json({ ...usuarios.publicUser(user), recoveryCode });
 }
 
@@ -26,7 +26,7 @@ async function recuperar(req, res) {
   if (!user || !user.recoveryCodeHash || hashRecoveryCode((recoveryCode || '').trim()) !== user.recoveryCodeHash) return res.status(401).json({ error: 'Usuario o código de recuperación incorrectos.' });
   if (!PASSWORD_REGEX.test(newPassword || '')) return res.status(400).json({ error: 'La nueva clave debe tener exactamente 6 dígitos.' });
   user.password = await hashPassword(newPassword);
-  destroyUserSessions(user.id);
+  await destroyUserSessions(user.id);
   await save(); res.json({ ok: true });
 }
 
@@ -61,7 +61,6 @@ async function cambiarClave(req, res) {
   if (!actual.valid) return res.status(401).json({ error: 'La clave actual es incorrecta.' });
   if (!PASSWORD_REGEX.test(nuevaClave || '')) return res.status(400).json({ error: 'La nueva clave debe tener exactamente 6 dígitos.' });
   if (nuevaClave === passwordActual) return res.status(400).json({ error: 'La nueva clave debe ser diferente a la actual.' });
-
   user.password = await hashPassword(nuevaClave);
   const recoveryCode = newRecoveryCode();
   user.recoveryCodeHash = hashRecoveryCode(recoveryCode);
@@ -92,7 +91,7 @@ async function eliminarDatosCuenta(userId) {
   db.links = db.links.filter(l => l.empleadoId !== userId && l.jefeId !== userId);
   if (Array.isArray(db.amistades)) db.amistades = db.amistades.filter(a => a.usuarioId !== userId && a.amistadId !== userId);
   db.turnos.forEach(t => { if (t.jefeAsignadoId === userId) { t.jefeAsignadoId = null; t.eliminacionPendiente = false; } });
-  usuarios.eliminar(userId); destroyUserSessions(userId); await save();
+  usuarios.eliminar(userId); await destroyUserSessions(userId); await save();
 }
 
 async function eliminarCuenta(req, res) {
@@ -109,35 +108,25 @@ async function login(req, res) {
   const adminId = (process.env.ADMIN_ID || '').trim().toLowerCase(); const adminPassword = process.env.ADMIN_PASSWORD || '';
   if (adminId && adminPassword && uname === adminId && password === adminPassword) {
     req.authRateLimit?.registrarExito();
-    setSessionCookie(res, createSession({ type: 'admin' }));
+    const sessionToken = await createSession({ type: 'admin' });
+    setSessionCookie(res, sessionToken);
     return res.json({ tipo: 'admin' });
   }
-  if (!PASSWORD_REGEX.test(password || '')) {
-    req.authRateLimit?.registrarFallo();
-    return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
-  }
+  if (!PASSWORD_REGEX.test(password || '')) { req.authRateLimit?.registrarFallo(); return res.status(401).json({ error: 'Usuario o clave incorrectos.' }); }
   const user = usuarios.buscarPorUsername(uname);
-  if (!user) {
-    req.authRateLimit?.registrarFallo();
-    return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
-  }
+  if (!user) { req.authRateLimit?.registrarFallo(); return res.status(401).json({ error: 'Usuario o clave incorrectos.' }); }
   const actual = await verifyPassword(password || '', user.password);
-  if (!actual.valid) {
-    req.authRateLimit?.registrarFallo();
-    return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
-  }
+  if (!actual.valid) { req.authRateLimit?.registrarFallo(); return res.status(401).json({ error: 'Usuario o clave incorrectos.' }); }
   req.authRateLimit?.registrarExito();
-
-  // Migración transparente: el primer login correcto después de S2
-  // reemplaza el SHA-256 antiguo por Argon2id.
   if (actual.legacy) user.password = await hashPassword(password);
   user.lastLoginAt = new Date().toISOString(); await save();
-  setSessionCookie(res, createSession({ type: 'user', userId: user.id })); res.json(usuarios.publicUser(user));
+  const sessionToken = await createSession({ type: 'user', userId: user.id });
+  setSessionCookie(res, sessionToken); res.json(usuarios.publicUser(user));
 }
 
 async function logout(req, res) {
   const match = (req.headers.cookie || '').match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]+)`));
-  if (match) destroySession(decodeURIComponent(match[1]));
+  if (match) await destroySession(decodeURIComponent(match[1]));
   clearSessionCookie(res); res.json({ ok: true });
 }
 
