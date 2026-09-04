@@ -31,6 +31,7 @@ const EMPTY_DB = {
 };
 
 const db = JSON.parse(JSON.stringify(EMPTY_DB));
+let mongoDb = null;
 let mongoCollection = null;
 let usandoMongo = false;
 
@@ -59,8 +60,14 @@ async function init() {
     const { MongoClient } = require('mongodb');
     const client = new MongoClient(MONGODB_URI);
     await client.connect();
-    mongoCollection = client.db(MONGODB_DB_NAME).collection('estado');
+    mongoDb = client.db(MONGODB_DB_NAME);
+    mongoCollection = mongoDb.collection('estado');
     usandoMongo = true;
+
+    // S5.1: la colección actual sigue siendo la fuente de compatibilidad.
+    // Se expone también la base de datos para que las siguientes tandas
+    // puedan migrar entidades a colecciones independientes sin modificar
+    // todavía los modelos ni los controladores existentes.
     const doc = await mongoCollection.findOne({ _id: 'riverospay' });
     if (doc) { delete doc._id; hidratar(doc); }
     else await mongoCollection.insertOne({ _id: 'riverospay', ...JSON.parse(JSON.stringify(EMPTY_DB)) });
@@ -76,4 +83,14 @@ async function save() {
   else guardarEnArchivo();
 }
 
-module.exports = { db, save, init };
+// S5.1 — acceso interno para la futura migración por colecciones.
+// No cambia la API pública que utilizan los modelos actuales.
+function getMongoDb() {
+  return mongoDb;
+}
+
+function isUsingMongo() {
+  return usandoMongo;
+}
+
+module.exports = { db, save, init, getMongoDb, isUsingMongo };
