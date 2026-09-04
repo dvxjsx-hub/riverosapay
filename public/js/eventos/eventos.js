@@ -153,3 +153,13 @@ function openEventoDetail(id) {
   script.async = false;
   document.head.appendChild(script);
 })();
+
+/* Carga la protección funcional del botón/gesto Atrás de Android. */
+(function cargarAtrasAndroid() {
+  if (document.querySelector('script[data-riverosapay-atras]')) return;
+  const script = document.createElement('script');
+  script.src = 'js/ui/atras-android.js';
+  script.dataset.riverosapayAtras = '1';
+  script.async = false;
+  document.head.appendChild(script);
+})();
