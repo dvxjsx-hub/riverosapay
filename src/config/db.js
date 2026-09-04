@@ -34,6 +34,9 @@ let mongoCollection = null;
 let mongoSessionsCollection = null;
 let mongoUsersCollection = null;
 let mongoEventosCollection = null;
+let mongoTurnosCollection = null;
+let mongoLugaresCollection = null;
+let mongoMateriasCollection = null;
 let usandoMongo = false;
 
 function hidratar(source) {
@@ -47,6 +50,9 @@ function hidratar(source) {
   if (!Array.isArray(db.sessions)) db.sessions = [];
   if (!Array.isArray(db.users)) db.users = [];
   if (!Array.isArray(db.eventos)) db.eventos = [];
+  if (!Array.isArray(db.turnos)) db.turnos = [];
+  if (!Array.isArray(db.lugares)) db.lugares = [];
+  if (!Array.isArray(db.materias)) db.materias = [];
 }
 
 function cargarDesdeArchivo() {
@@ -126,7 +132,6 @@ async function migrarEventos() {
     return copy;
   });
 
-  // El documento legado deja de transportar eventos.
   await mongoCollection.updateOne({ _id: 'riverospay' }, { $set: { eventos: [] } }, { upsert: true });
 }
 
@@ -151,6 +156,60 @@ async function guardarEventos() {
   }
 }
 
+async function migrarColeccionIndependiente(collection, clave, indexFields = []) {
+  const docs = await collection.find({}).toArray();
+  const datosActuales = Array.isArray(db[clave]) ? db[clave] : [];
+
+  if (!docs.length && datosActuales.length) {
+    await collection.bulkWrite(
+      datosActuales.filter(item => item && item.id).map(item => ({
+        updateOne: {
+          filter: { _id: item.id },
+          update: { $set: item },
+          upsert: true
+        }
+      })),
+      { ordered: false }
+    );
+  }
+
+  const datosMongo = await collection.find({}).toArray();
+  db[clave] = datosMongo.map(item => {
+    const copy = { ...item };
+    delete copy._id;
+    return copy;
+  });
+
+  for (const field of indexFields) {
+    await collection.createIndex({ [field]: 1 });
+  }
+
+  await mongoCollection.updateOne({ _id: 'riverospay' }, { $set: { [clave]: [] } }, { upsert: true });
+}
+
+async function guardarColeccionIndependiente(collection, clave) {
+  if (!collection) return;
+
+  const datosActuales = Array.isArray(db[clave]) ? db[clave] : [];
+  const idsActuales = datosActuales.filter(item => item && item.id).map(item => item.id);
+
+  if (idsActuales.length) {
+    await collection.deleteMany({ _id: { $nin: idsActuales } });
+    await collection.bulkWrite(
+      datosActuales.filter(item => item && item.id).map(item => ({
+        updateOne: {
+          filter: { _id: item.id },
+          update: { $set: item },
+          upsert: true
+        }
+      })),
+      { ordered: false }
+    );
+  } else {
+    await collection.deleteMany({});
+  }
+}
+
 async function init() {
   if (MONGODB_URI) {
     const { MongoClient } = require('mongodb');
@@ -161,6 +220,9 @@ async function init() {
     mongoSessionsCollection = mongoDb.collection('sessions');
     mongoUsersCollection = mongoDb.collection('users');
     mongoEventosCollection = mongoDb.collection('eventos');
+    mongoTurnosCollection = mongoDb.collection('turnos');
+    mongoLugaresCollection = mongoDb.collection('lugares');
+    mongoMateriasCollection = mongoDb.collection('materias');
     usandoMongo = true;
 
     const doc = await mongoCollection.findOne({ _id: 'riverospay' });
@@ -201,6 +263,11 @@ async function init() {
     await mongoEventosCollection.createIndex({ empleadoId: 1 });
     await migrarEventos();
 
+    // S5.5: turnos, lugares y materias en colecciones independientes.
+    await migrarColeccionIndependiente(mongoTurnosCollection, 'turnos', ['empleadoId', 'jefeAsignadoId', 'lugarId']);
+    await migrarColeccionIndependiente(mongoLugaresCollection, 'lugares', ['empleadoId']);
+    await migrarColeccionIndependiente(mongoMateriasCollection, 'materias', ['empleadoId']);
+
     console.log('[riverospay] Conectado a MongoDB Atlas.');
   } else {
     hidratar(cargarDesdeArchivo());
@@ -210,13 +277,19 @@ async function init() {
 
 async function save() {
   if (usandoMongo && mongoCollection) {
-    // Usuarios, sesiones y eventos ya tienen colecciones independientes.
+    // Usuarios, sesiones, eventos, turnos, lugares y materias ya tienen persistencia independiente.
     await guardarUsuarios();
     await guardarEventos();
+    await guardarColeccionIndependiente(mongoTurnosCollection, 'turnos');
+    await guardarColeccionIndependiente(mongoLugaresCollection, 'lugares');
+    await guardarColeccionIndependiente(mongoMateriasCollection, 'materias');
     const estado = { ...db };
     delete estado.users;
     delete estado.sessions;
     delete estado.eventos;
+    delete estado.turnos;
+    delete estado.lugares;
+    delete estado.materias;
     await mongoCollection.updateOne({ _id: 'riverospay' }, { $set: estado }, { upsert: true });
   } else {
     guardarEnArchivo();
