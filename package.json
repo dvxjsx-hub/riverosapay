@@ -12,6 +12,7 @@
     "node": "20.x"
   },
   "dependencies": {
+    "argon2": "^0.41.1",
     "express": "^4.19.2",
     "socket.io": "^4.7.5",
     "mongodb": "^6.7.0"
