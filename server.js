@@ -5,6 +5,7 @@
 
 const path = require('path');
 const express = require('express');
+const helmet = require('helmet');
 const http = require('http');
 const { Server } = require('socket.io');
 
@@ -24,7 +25,30 @@ const amistadesRoutes = require('./src/routes/amistades.routes');
 const tesoreriaRoutes = require('./src/routes/tesoreria.routes');
 
 const app = express();
-app.use(express.json());
+
+// S4 — cabeceras HTTP de seguridad. La CSP está adaptada al frontend actual
+// (Google Fonts, Socket.IO/WebSocket y estilos dinámicos existentes).
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      baseUri: ["'self'"],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      formAction: ["'self'"],
+      frameAncestors: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'blob:'],
+      objectSrc: ["'none'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      connectSrc: ["'self'", 'ws:', 'wss:']
+    }
+  }
+}));
+
+// S4 — límites para evitar cuerpos HTTP excesivamente grandes.
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: false, limit: '100kb', parameterLimit: 100 }));
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Health check público para comprobar que la aplicación está viva.
