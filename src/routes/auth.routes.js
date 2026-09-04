@@ -2,12 +2,13 @@ const express = require('express');
 const auth = require('../controllers/auth.controller');
 const ah = require('../middleware/asyncHandler');
 const { requireUser } = require('../middleware/session');
+const { loginRateLimit } = require('../middleware/authRateLimit');
 
 const router = express.Router();
 
 router.post('/register', ah(auth.registrar));
 router.post('/recuperar', ah(auth.recuperar));
-router.post('/login', ah(auth.login));
+router.post('/login', loginRateLimit, ah(auth.login));
 router.post('/logout', ah(auth.logout));
 
 router.post('/nombre', requireUser, ah(auth.configurarNombre));
