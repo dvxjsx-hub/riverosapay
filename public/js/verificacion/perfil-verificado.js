@@ -36,7 +36,6 @@
         align-items:center;
         justify-content:center;
         gap:7px;
-        flex-wrap:wrap;
       }
       .riverosapay-verified-message {
         margin-top:2px;
@@ -44,19 +43,20 @@
         font-weight:600;
         color:#55A86F;
       }
+      .riverosapay-header-verified-avatar {
+        position:relative !important;
+        overflow:visible !important;
+      }
       .riverosapay-header-verified {
         position:absolute;
-        top:-3px;
-        right:-3px;
+        top:-7px;
+        right:-7px;
         width:19px;
         height:19px;
         min-width:19px;
-        z-index:2;
+        z-index:20;
         pointer-events:none;
         border:2px solid var(--surface,#fff);
-      }
-      .riverosapay-header-verified-avatar {
-        position:relative !important;
       }
       html[data-theme="dark"] .riverosapay-header-verified {
         border-color:var(--surface,#171C19);
@@ -83,36 +83,39 @@
   function actualizarPerfilAbierto() {
     if (!esUsuarioVerificado()) return;
     const body = document.getElementById('modal-body');
-    if (!body || document.getElementById('riverosapay-profile-verified')) return;
+    if (!body) return;
     const nombre = body.querySelector('h2');
     if (!nombre) return;
 
-    const linea = document.createElement('div');
-    linea.id = 'riverosapay-profile-verified';
-    linea.className = 'riverosapay-profile-name';
-    while (nombre.firstChild) nombre.removeChild(nombre.firstChild);
-    nombre.appendChild(document.createTextNode(nombreMostrado()));
+    let linea = body.querySelector('#riverosapay-profile-verified');
+    if (!linea) {
+      linea = document.createElement('div');
+      linea.id = 'riverosapay-profile-verified';
+      linea.className = 'riverosapay-profile-name';
+      nombre.replaceWith(linea);
+      linea.appendChild(nombre);
+    }
 
-    const badge = document.createElement('button');
-    badge.type = 'button';
-    badge.className = 'riverosapay-verified-badge';
-    badge.textContent = '✓';
-    badge.title = 'Cuenta verificada';
-    badge.setAttribute('aria-label', 'Cuenta verificada');
+    if (!linea.querySelector('.riverosapay-profile-verified-badge')) {
+      const badge = document.createElement('button');
+      badge.type = 'button';
+      badge.className = 'riverosapay-verified-badge riverosapay-profile-verified-badge';
+      badge.textContent = '✓';
+      badge.title = 'Cuenta verificada';
+      badge.setAttribute('aria-label', 'Cuenta verificada');
 
-    const mensaje = document.createElement('div');
-    mensaje.className = 'riverosapay-verified-message hidden';
-    mensaje.textContent = 'Eres usuario verificado.';
+      const mensaje = document.createElement('div');
+      mensaje.className = 'riverosapay-verified-message hidden';
+      mensaje.textContent = 'Eres usuario verificado.';
 
-    badge.addEventListener('click', function (ev) {
-      ev.stopPropagation();
-      mensaje.classList.toggle('hidden');
-    });
+      badge.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        mensaje.classList.toggle('hidden');
+      });
 
-    linea.appendChild(badge);
-    nombre.replaceWith(linea);
-    const contenedor = linea.parentElement;
-    if (contenedor) contenedor.appendChild(mensaje);
+      linea.appendChild(badge);
+      linea.parentElement?.appendChild(mensaje);
+    }
   }
 
   function instalar() {
