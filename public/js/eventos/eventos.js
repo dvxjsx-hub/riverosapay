@@ -102,11 +102,34 @@ async function submitEvento() {
   } catch (ex) { err.textContent = ex.message; }
 }
 
+async function eliminarEvento(id) {
+  try {
+    await api.delete(`/api/evento/${STATE.user.id}/${id}`);
+    closeModal();
+    toast('Evento eliminado');
+    await loadEventos();
+  } catch (ex) {
+    toast(ex.message);
+  }
+}
+
+function confirmarEliminarEvento(id) {
+  openModal('Eliminar evento', `
+    <p style="margin:0 0 12px;">¿Quieres eliminar este evento?</p>
+    <p class="muted" style="margin:0;">Esta acción no se puede deshacer.</p>
+    <div class="notif-actions" style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn-secondary" type="button" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" type="button" onclick="eliminarEvento('${id}')">Eliminar</button>
+    </div>
+  `);
+}
+
 function openEventoDetail(id) {
   const isJefe = STATE.viewMode === 'jefe-ver';
   const list = isJefe ? (STATE.jefeView.eventos || []) : STATE.eventos;
   const e = list.find(x => x.id === id);
   if (!e) return;
+  const acciones = isJefe ? '' : `<button class="btn-ghost-danger" type="button" onclick="confirmarEliminarEvento('${id}')">Eliminar evento</button>`;
   openModal('Detalle del evento', `
     <div class="detail-row"><span>Lugar</span><span>${escapeHtml(e.lugar)}</span></div>
     <div class="detail-row"><span>Día</span><span>${e.dia}</span></div>
@@ -117,5 +140,6 @@ function openEventoDetail(id) {
       <p class="muted" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin:0 0 6px;">Descripción</p>
       <p style="margin:0;font-size:14px;">${e.descripcion ? escapeHtml(e.descripcion) : 'Sin descripción.'}</p>
     </div>
+    ${acciones}
   `);
 }
