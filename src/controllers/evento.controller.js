@@ -20,4 +20,14 @@ async function crearEvento(req, res) {
   evento.crearEvento(nuevoEvento); await save(); evento.broadcast(empleadoId); res.json(nuevoEvento);
 }
 
-module.exports = { obtenerEventos, crearEvento };
+async function eliminarEvento(req, res) {
+  const empleadoId = req.params.empleadoId;
+  if (!esPropietario(req, empleadoId)) return res.status(403).json({ error: 'Solo puedes eliminar tus propios eventos.' });
+  const eliminado = evento.eliminarEvento(req.params.eventoId, empleadoId);
+  if (!eliminado) return res.status(404).json({ error: 'Evento no encontrado.' });
+  await save();
+  evento.broadcast(empleadoId);
+  res.json({ ok: true, evento: eliminado });
+}
+
+module.exports = { obtenerEventos, crearEvento, eliminarEvento };
