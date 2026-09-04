@@ -13,4 +13,11 @@ function crearEvento(evento) {
   db.eventos.push(evento);
 }
 
-module.exports = { broadcast, eventosDe, crearEvento };
+function eliminarEvento(id, empleadoId) {
+  const index = db.eventos.findIndex(e => e.id === id && e.empleadoId === empleadoId);
+  if (index === -1) return null;
+  const eliminado = db.eventos.splice(index, 1)[0];
+  return eliminado;
+}
+
+module.exports = { broadcast, eventosDe, crearEvento, eliminarEvento };
