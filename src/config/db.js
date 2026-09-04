@@ -26,7 +26,8 @@ const EMPTY_DB = {
   trabajoSolicitudes: [],
   tesorerias: [],
   tesoreriaSolicitudes: [],
-  tesoreriaMovimientos: []
+  tesoreriaMovimientos: [],
+  sessions: []
 };
 
 const db = JSON.parse(JSON.stringify(EMPTY_DB));
@@ -41,6 +42,7 @@ function hidratar(source) {
   if (!Array.isArray(db.tesorerias)) db.tesorerias = [];
   if (!Array.isArray(db.tesoreriaSolicitudes)) db.tesoreriaSolicitudes = [];
   if (!Array.isArray(db.tesoreriaMovimientos)) db.tesoreriaMovimientos = [];
+  if (!Array.isArray(db.sessions)) db.sessions = [];
 }
 
 function cargarDesdeArchivo() {
