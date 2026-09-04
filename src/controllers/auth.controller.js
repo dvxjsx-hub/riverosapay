@@ -1,6 +1,6 @@
 const { db, save } = require('../config/db');
 const usuarios = require('../models/usuarios.model');
-const { hashPassword, newId, newShareCode, newFriendCode, USERNAME_REGEX, PASSWORD_REGEX, hashRecoveryCode, newRecoveryCode } = require('../utils/utils');
+const { hashPassword, verifyPassword, newId, newShareCode, newFriendCode, USERNAME_REGEX, PASSWORD_REGEX, hashRecoveryCode, newRecoveryCode } = require('../utils/utils');
 const { COOKIE_NAME, createSession, setSessionCookie, clearSessionCookie, readSession, destroySession, destroyUserSessions } = require('../middleware/session');
 
 async function registrar(req, res) {
@@ -14,7 +14,7 @@ async function registrar(req, res) {
 
   const recoveryCode = newRecoveryCode();
   const now = new Date().toISOString();
-  const user = { id: newId('u'), username: uname, password: hashPassword(password), role: 'empleado', shareCode: newShareCode(db), modoActual: 'empleado', codigoAmistad: newFriendCode(db), nombreCompleto: null, esEstudiante: true, recoveryCodeHash: hashRecoveryCode(recoveryCode), createdAt: now, lastLoginAt: now };
+  const user = { id: newId('u'), username: uname, password: await hashPassword(password), role: 'empleado', shareCode: newShareCode(db), modoActual: 'empleado', codigoAmistad: newFriendCode(db), nombreCompleto: null, esEstudiante: true, recoveryCodeHash: hashRecoveryCode(recoveryCode), createdAt: now, lastLoginAt: now };
   usuarios.crear(user); await save();
   setSessionCookie(res, createSession({ type: 'user', userId: user.id }));
   res.json({ ...usuarios.publicUser(user), recoveryCode });
@@ -25,7 +25,7 @@ async function recuperar(req, res) {
   const user = usuarios.buscarPorUsername((username || '').trim().toLowerCase());
   if (!user || !user.recoveryCodeHash || hashRecoveryCode((recoveryCode || '').trim()) !== user.recoveryCodeHash) return res.status(401).json({ error: 'Usuario o código de recuperación incorrectos.' });
   if (!PASSWORD_REGEX.test(newPassword || '')) return res.status(400).json({ error: 'La nueva clave debe tener exactamente 6 dígitos.' });
-  user.password = hashPassword(newPassword);
+  user.password = await hashPassword(newPassword);
   destroyUserSessions(user.id);
   await save(); res.json({ ok: true });
 }
@@ -57,11 +57,12 @@ async function cambiarClave(req, res) {
   const { passwordActual, nuevaClave } = req.body || {};
   const user = usuarios.buscarPorId(req.userId);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
-  if (user.password !== hashPassword(passwordActual || '')) return res.status(401).json({ error: 'La clave actual es incorrecta.' });
+  const actual = await verifyPassword(passwordActual || '', user.password);
+  if (!actual.valid) return res.status(401).json({ error: 'La clave actual es incorrecta.' });
   if (!PASSWORD_REGEX.test(nuevaClave || '')) return res.status(400).json({ error: 'La nueva clave debe tener exactamente 6 dígitos.' });
   if (nuevaClave === passwordActual) return res.status(400).json({ error: 'La nueva clave debe ser diferente a la actual.' });
 
-  user.password = hashPassword(nuevaClave);
+  user.password = await hashPassword(nuevaClave);
   const recoveryCode = newRecoveryCode();
   user.recoveryCodeHash = hashRecoveryCode(recoveryCode);
   await save();
@@ -71,7 +72,9 @@ async function cambiarClave(req, res) {
 async function obtenerNuevoCodigoRecuperacion(req, res) {
   const { username, password } = req.body || {};
   const user = usuarios.buscarPorUsername((username || '').trim().toLowerCase());
-  if (!user || user.id !== req.userId || user.password !== hashPassword(password || '')) return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
+  if (!user || user.id !== req.userId) return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
+  const actual = await verifyPassword(password || '', user.password);
+  if (!actual.valid) return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
   const recoveryCode = newRecoveryCode();
   user.recoveryCodeHash = hashRecoveryCode(recoveryCode);
   await save();
@@ -94,7 +97,9 @@ async function eliminarDatosCuenta(userId) {
 
 async function eliminarCuenta(req, res) {
   const { password } = req.body || {}; const user = usuarios.buscarPorId(req.userId);
-  if (!user || user.password !== hashPassword(password || '')) return res.status(401).json({ error: 'Contraseña incorrecta.' });
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+  const actual = await verifyPassword(password || '', user.password);
+  if (!actual.valid) return res.status(401).json({ error: 'Contraseña incorrecta.' });
   await eliminarDatosCuenta(req.userId);
   clearSessionCookie(res); res.json({ ok: true });
 }
@@ -112,11 +117,20 @@ async function login(req, res) {
     return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
   }
   const user = usuarios.buscarPorUsername(uname);
-  if (!user || user.password !== hashPassword(password || '')) {
+  if (!user) {
+    req.authRateLimit?.registrarFallo();
+    return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
+  }
+  const actual = await verifyPassword(password || '', user.password);
+  if (!actual.valid) {
     req.authRateLimit?.registrarFallo();
     return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
   }
   req.authRateLimit?.registrarExito();
+
+  // Migración transparente: el primer login correcto después de S2
+  // reemplaza el SHA-256 antiguo por Argon2id.
+  if (actual.legacy) user.password = await hashPassword(password);
   user.lastLoginAt = new Date().toISOString(); await save();
   setSessionCookie(res, createSession({ type: 'user', userId: user.id })); res.json(usuarios.publicUser(user));
 }
@@ -136,4 +150,4 @@ async function elegirRol(req, res) {
   if (!user.codigoAmistad) user.codigoAmistad = newFriendCode(db); await save(); res.json(usuarios.publicUser(user));
 }
 
-module.exports = { registrar, recuperar, configurarNombre, preferencias, cambiarModo, cambiarClave, obtenerNuevoCodigoRecuperacion, eliminarCuenta, eliminarDatosCuenta, login, logout, elegirRol };
+module.exports = { registrar, recuperar, configurarNombre, preferencias, cambiarModo, cambiarClave, obtenerNuevoCodigoRecuperacion, eliminarCuenta, eliminarDatosCuenta, login, logout, elegirRol }; 
