@@ -1,5 +1,6 @@
 const express = require('express');
 const trabajo = require('../controllers/trabajo.controller');
+const trabajadorPersonal = require('../controllers/trabajadorPersonal.controller');
 const trabajoPago = require('../controllers/trabajoPago.controller');
 const trabajoCongelado = require('../controllers/trabajoCongelado.controller');
 const ah = require('../middleware/asyncHandler');
@@ -11,6 +12,9 @@ router.use(requireUser);
 
 router.get('/mis-jefes/:empleadoId', ah(trabajo.obtenerMisJefes));
 router.get('/trabajo/jefe/:jefeId', ah(trabajo.obtenerTrabajosComoJefe));
+router.get('/trabajo/jefe/:jefeId/personal', ah(trabajadorPersonal.listar));
+router.post('/trabajo/jefe/:jefeId/personal', ah(trabajadorPersonal.crear));
+router.get('/trabajo/jefe/:jefeId/personal/:trabajadorId', ah(trabajadorPersonal.obtener));
 router.post('/trabajo/jefe/:jefeId/solicitudes', ah(trabajo.crearSolicitudTrabajo));
 router.post('/trabajo/solicitudes/:solicitudId/responder', ah(trabajo.responderSolicitudTrabajo));
 router.get('/trabajo/:empleadoId', ah(trabajo.obtenerSnapshot));
