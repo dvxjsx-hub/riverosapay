@@ -26,23 +26,10 @@ const tesoreriaRoutes = require('./src/routes/tesoreria.routes');
 
 const app = express();
 
-// S4 — cabeceras HTTP de seguridad. La CSP está adaptada al frontend actual
-// (Google Fonts, Socket.IO/WebSocket y estilos dinámicos existentes).
+// S4 — cabeceras HTTP de seguridad. La CSP queda desactivada por ahora
+// para no interferir con el frontend existente; el resto de Helmet sigue activo.
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      baseUri: ["'self'"],
-      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
-      formAction: ["'self'"],
-      frameAncestors: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'blob:'],
-      objectSrc: ["'none'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-      connectSrc: ["'self'", 'ws:', 'wss:']
-    }
-  }
+  contentSecurityPolicy: false
 }));
 
 // S4 — límites para evitar cuerpos HTTP excesivamente grandes.
