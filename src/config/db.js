@@ -33,6 +33,7 @@ let mongoDb = null;
 let mongoCollection = null;
 let mongoSessionsCollection = null;
 let mongoUsersCollection = null;
+let mongoEventosCollection = null;
 let usandoMongo = false;
 
 function hidratar(source) {
@@ -45,6 +46,7 @@ function hidratar(source) {
   if (!Array.isArray(db.tesoreriaMovimientos)) db.tesoreriaMovimientos = [];
   if (!Array.isArray(db.sessions)) db.sessions = [];
   if (!Array.isArray(db.users)) db.users = [];
+  if (!Array.isArray(db.eventos)) db.eventos = [];
 }
 
 function cargarDesdeArchivo() {
@@ -78,7 +80,6 @@ async function migrarUsuarios() {
     return copy;
   });
 
-  // El documento legado deja de transportar usuarios.
   await mongoCollection.updateOne({ _id: 'riverospay' }, { $set: { users: [] } }, { upsert: true });
 }
 
@@ -103,6 +104,53 @@ async function guardarUsuarios() {
   }
 }
 
+async function migrarEventos() {
+  const docs = await mongoEventosCollection.find({}).toArray();
+  if (!docs.length && Array.isArray(db.eventos) && db.eventos.length) {
+    await mongoEventosCollection.bulkWrite(
+      db.eventos.filter(e => e && e.id).map(evento => ({
+        updateOne: {
+          filter: { _id: evento.id },
+          update: { $set: evento },
+          upsert: true
+        }
+      })),
+      { ordered: false }
+    );
+  }
+
+  const eventosMongo = await mongoEventosCollection.find({}).toArray();
+  db.eventos = eventosMongo.map(evento => {
+    const copy = { ...evento };
+    delete copy._id;
+    return copy;
+  });
+
+  // El documento legado deja de transportar eventos.
+  await mongoCollection.updateOne({ _id: 'riverospay' }, { $set: { eventos: [] } }, { upsert: true });
+}
+
+async function guardarEventos() {
+  if (!mongoEventosCollection) return;
+
+  const idsActuales = db.eventos.filter(e => e && e.id).map(e => e.id);
+  if (idsActuales.length) {
+    await mongoEventosCollection.deleteMany({ _id: { $nin: idsActuales } });
+    await mongoEventosCollection.bulkWrite(
+      db.eventos.filter(e => e && e.id).map(evento => ({
+        updateOne: {
+          filter: { _id: evento.id },
+          update: { $set: evento },
+          upsert: true
+        }
+      })),
+      { ordered: false }
+    );
+  } else {
+    await mongoEventosCollection.deleteMany({});
+  }
+}
+
 async function init() {
   if (MONGODB_URI) {
     const { MongoClient } = require('mongodb');
@@ -112,6 +160,7 @@ async function init() {
     mongoCollection = mongoDb.collection('estado');
     mongoSessionsCollection = mongoDb.collection('sessions');
     mongoUsersCollection = mongoDb.collection('users');
+    mongoEventosCollection = mongoDb.collection('eventos');
     usandoMongo = true;
 
     const doc = await mongoCollection.findOne({ _id: 'riverospay' });
@@ -141,12 +190,16 @@ async function init() {
     await mongoCollection.updateOne({ _id: 'riverospay' }, { $set: { sessions: [] } }, { upsert: true });
 
     // S5.3: usuarios en colección independiente.
-    // Los modelos siguen trabajando con db.users para conservar compatibilidad.
     await mongoUsersCollection.createIndex({ id: 1 });
     await mongoUsersCollection.createIndex({ username: 1 });
     await mongoUsersCollection.createIndex({ codigoAmistad: 1 });
     await mongoUsersCollection.createIndex({ shareCode: 1 });
     await migrarUsuarios();
+
+    // S5.4: eventos en colección independiente.
+    await mongoEventosCollection.createIndex({ id: 1 }, { unique: true });
+    await mongoEventosCollection.createIndex({ empleadoId: 1 });
+    await migrarEventos();
 
     console.log('[riverospay] Conectado a MongoDB Atlas.');
   } else {
@@ -157,11 +210,13 @@ async function init() {
 
 async function save() {
   if (usandoMongo && mongoCollection) {
-    // Usuarios y sesiones ya tienen colecciones independientes.
+    // Usuarios, sesiones y eventos ya tienen colecciones independientes.
     await guardarUsuarios();
+    await guardarEventos();
     const estado = { ...db };
     delete estado.users;
     delete estado.sessions;
+    delete estado.eventos;
     await mongoCollection.updateOne({ _id: 'riverospay' }, { $set: estado }, { upsert: true });
   } else {
     guardarEnArchivo();
@@ -180,8 +235,12 @@ function getMongoUsersCollection() {
   return mongoUsersCollection;
 }
 
+function getMongoEventosCollection() {
+  return mongoEventosCollection;
+}
+
 function isUsingMongo() {
   return usandoMongo;
 }
 
-module.exports = { db, save, init, getMongoDb, getMongoSessionsCollection, getMongoUsersCollection, isUsingMongo };
+module.exports = { db, save, init, getMongoDb, getMongoSessionsCollection, getMongoUsersCollection, getMongoEventosCollection, isUsingMongo };
