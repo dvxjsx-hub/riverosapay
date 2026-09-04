@@ -2,17 +2,11 @@ const verificacion = require('../models/verificacion.model');
 const { readSession } = require('../middleware/session');
 
 function initSockets(io) {
-  io.use(async (socket, next) => {
-    try {
-      const session = await readSession(socket.request);
-      if (!session || session.type !== 'user' || !session.userId) {
-        return next(new Error('Sesión de usuario requerida.'));
-      }
-      socket.userId = session.userId;
-      next();
-    } catch (error) {
-      next(new Error('No se pudo validar la sesión de usuario.'));
-    }
+  io.use((socket, next) => {
+    const session = readSession(socket.request);
+    if (!session || session.type !== 'user' || !session.userId) return next(new Error('Sesión de usuario requerida.'));
+    socket.userId = session.userId;
+    next();
   });
 
   io.on('connection', (socket) => {
