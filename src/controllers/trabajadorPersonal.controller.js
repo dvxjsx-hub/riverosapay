@@ -17,6 +17,7 @@ function validarBoss(req) {
 function datosTrabajo(body) {
   return {
     nombre: String((body && body.nombre) || '').trim(),
+    trabajadorId: String((body && body.trabajadorId) || '').trim(),
     lugar: String((body && body.lugar) || '').trim(),
     fecha: String((body && body.fecha) || '').trim(),
     dia: String((body && body.dia) || '').trim(),
@@ -37,9 +38,10 @@ async function crear(req, res) {
   if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
 
   const data = datosTrabajo(req.body);
-  if (!data.nombre || !data.lugar || !data.fecha || !data.horaInicio || !data.horaFin) {
-    return res.status(400).json({ error: 'Completa nombre, lugar, fecha y horario.' });
+  if (!data.lugar || !data.fecha || !data.horaInicio || !data.horaFin) {
+    return res.status(400).json({ error: 'Completa trabajador, lugar, fecha y horario.' });
   }
+  if (!data.trabajadorId && !data.nombre) return res.status(400).json({ error: 'Indica un nombre para crear el trabajador personalizado.' });
   if (data.nombre.length > 80) return res.status(400).json({ error: 'El nombre de referencia no puede superar 80 caracteres.' });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data.fecha)) return res.status(400).json({ error: 'La fecha del trabajo no es válida.' });
 
@@ -49,13 +51,19 @@ async function crear(req, res) {
     return res.status(400).json({ error: 'La hora final debe ser posterior a la hora inicial.' });
   }
 
-  const trabajador = trabajadores.crear({
-    id: newId('per'),
-    jefeId: auth.jefeId,
-    nombre: data.nombre,
-    tipo: 'personal',
-    createdAt: Date.now()
-  });
+  let trabajador;
+  if (data.trabajadorId) {
+    trabajador = trabajadores.buscarPorId(data.trabajadorId);
+    if (!trabajador || trabajador.jefeId !== auth.jefeId) return res.status(404).json({ error: 'Trabajador personalizado no encontrado.' });
+  } else {
+    trabajador = trabajadores.crear({
+      id: newId('per'),
+      jefeId: auth.jefeId,
+      nombre: data.nombre,
+      tipo: 'personal',
+      createdAt: Date.now()
+    });
+  }
 
   const lug = trabajo.buscarOCrearLugar(trabajador.id, data.lugar);
   const turno = {
