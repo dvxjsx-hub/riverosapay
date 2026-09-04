@@ -102,10 +102,21 @@ async function eliminarCuenta(req, res) {
 async function login(req, res) {
   const { username, password } = req.body || {}; const uname = (username || '').trim().toLowerCase();
   const adminId = (process.env.ADMIN_ID || '').trim().toLowerCase(); const adminPassword = process.env.ADMIN_PASSWORD || '';
-  if (adminId && adminPassword && uname === adminId && password === adminPassword) { setSessionCookie(res, createSession({ type: 'admin' })); return res.json({ tipo: 'admin' }); }
-  if (!PASSWORD_REGEX.test(password || '')) return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
+  if (adminId && adminPassword && uname === adminId && password === adminPassword) {
+    req.authRateLimit?.registrarExito();
+    setSessionCookie(res, createSession({ type: 'admin' }));
+    return res.json({ tipo: 'admin' });
+  }
+  if (!PASSWORD_REGEX.test(password || '')) {
+    req.authRateLimit?.registrarFallo();
+    return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
+  }
   const user = usuarios.buscarPorUsername(uname);
-  if (!user || user.password !== hashPassword(password || '')) return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
+  if (!user || user.password !== hashPassword(password || '')) {
+    req.authRateLimit?.registrarFallo();
+    return res.status(401).json({ error: 'Usuario o clave incorrectos.' });
+  }
+  req.authRateLimit?.registrarExito();
   user.lastLoginAt = new Date().toISOString(); await save();
   setSessionCookie(res, createSession({ type: 'user', userId: user.id })); res.json(usuarios.publicUser(user));
 }
