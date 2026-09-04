@@ -5,8 +5,6 @@
 const fs = require('fs');
 const path = require('path');
 
-// En desarrollo/producción conserva la ruta actual. Los tests pueden
-// inyectar otra ruta para no tocar la base real de data/db.json.
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', '..', 'data', 'db.json');
 const MONGODB_URI = process.env.MONGODB_URI || '';
 const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'riverospay';
@@ -33,6 +31,7 @@ const EMPTY_DB = {
 const db = JSON.parse(JSON.stringify(EMPTY_DB));
 let mongoDb = null;
 let mongoCollection = null;
+let mongoSessionsCollection = null;
 let usandoMongo = false;
 
 function hidratar(source) {
@@ -62,15 +61,38 @@ async function init() {
     await client.connect();
     mongoDb = client.db(MONGODB_DB_NAME);
     mongoCollection = mongoDb.collection('estado');
+    mongoSessionsCollection = mongoDb.collection('sessions');
     usandoMongo = true;
 
-    // S5.1: la colección actual sigue siendo la fuente de compatibilidad.
-    // Se expone también la base de datos para que las siguientes tandas
-    // puedan migrar entidades a colecciones independientes sin modificar
-    // todavía los modelos ni los controladores existentes.
     const doc = await mongoCollection.findOne({ _id: 'riverospay' });
-    if (doc) { delete doc._id; hidratar(doc); }
-    else await mongoCollection.insertOne({ _id: 'riverospay', ...JSON.parse(JSON.stringify(EMPTY_DB)) });
+    if (doc) {
+      delete doc._id;
+      hidratar(doc);
+    } else {
+      await mongoCollection.insertOne({ _id: 'riverospay', ...JSON.parse(JSON.stringify(EMPTY_DB)) });
+    }
+
+    // S5.2: migración compatible de las sesiones existentes hacia su propia colección.
+    // Se conserva el mismo tokenHash como identidad única para no invalidar sesiones.
+    await mongoSessionsCollection.createIndex({ tokenHash: 1 }, { unique: true });
+    await mongoSessionsCollection.createIndex({ userId: 1 });
+    if (Array.isArray(db.sessions) && db.sessions.length) {
+      await mongoSessionsCollection.bulkWrite(
+        db.sessions.map(session => ({
+          updateOne: {
+            filter: { tokenHash: session.tokenHash },
+            update: { $set: session },
+            upsert: true
+          }
+        })),
+        { ordered: false }
+      );
+    }
+    // Desde este punto, con MongoDB, las sesiones viven exclusivamente en
+    // la colección sessions. El documento legado deja de transportarlas.
+    db.sessions = [];
+    await mongoCollection.updateOne({ _id: 'riverospay' }, { $set: { sessions: [] } }, { upsert: true });
+
     console.log('[riverospay] Conectado a MongoDB Atlas.');
   } else {
     hidratar(cargarDesdeArchivo());
@@ -83,14 +105,16 @@ async function save() {
   else guardarEnArchivo();
 }
 
-// S5.1 — acceso interno para la futura migración por colecciones.
-// No cambia la API pública que utilizan los modelos actuales.
 function getMongoDb() {
   return mongoDb;
+}
+
+function getMongoSessionsCollection() {
+  return mongoSessionsCollection;
 }
 
 function isUsingMongo() {
   return usandoMongo;
 }
 
-module.exports = { db, save, init, getMongoDb, isUsingMongo };
+module.exports = { db, save, init, getMongoDb, getMongoSessionsCollection, isUsingMongo };
