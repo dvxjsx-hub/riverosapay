@@ -161,7 +161,9 @@ async function save() {
     return;
   }
 
-  await guardarSessions();
+  // Las sesiones en Mongo se gestionan directamente desde session.js.
+  // No deben sincronizarse desde db.sessions porque en modo Mongo ese arreglo
+  // permanece vacío por diseño y podría borrar todas las sesiones activas.
   for (const clave of Object.keys(COLECCIONES_INDEPENDIENTES)) {
     await guardarColeccion(clave, mongoCollections[clave]);
   }
