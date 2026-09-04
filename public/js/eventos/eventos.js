@@ -143,3 +143,13 @@ function openEventoDetail(id) {
     ${acciones}
   `);
 }
+
+/* Carga el pequeño módulo visual de cuentas verificadas sin alterar la lógica de Eventos. */
+(function cargarUIVerificado() {
+  if (document.querySelector('script[data-riverosapay-verificado]')) return;
+  const script = document.createElement('script');
+  script.src = 'js/verificacion/perfil-verificado.js';
+  script.dataset.riverosapayVerificado = '1';
+  script.async = false;
+  document.head.appendChild(script);
+})();
