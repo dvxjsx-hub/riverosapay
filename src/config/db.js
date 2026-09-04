@@ -12,7 +12,7 @@ const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'riverospay';
 const EMPTY_DB = {
   users: [], amistades: [], amistadSolicitudes: [], turnos: [], lugares: [], materias: [],
   actividades: [], eventos: [], joinRequests: [], links: [], notificaciones: [],
-  trabajoSolicitudes: [], tesorerias: [], tesoreriaSolicitudes: [], tesoreriaMovimientos: [], sessions: []
+  trabajoSolicitudes: [], trabajadoresPersonal: [], tesorerias: [], tesoreriaSolicitudes: [], tesoreriaMovimientos: [], sessions: []
 };
 
 const db = JSON.parse(JSON.stringify(EMPTY_DB));
@@ -34,6 +34,7 @@ const COLECCIONES_INDEPENDIENTES = {
   links: ['links', ['empleadoId', 'jefeId']],
   notificaciones: ['notificaciones', ['usuarioId', 'empleadoId']],
   trabajoSolicitudes: ['trabajoSolicitudes', ['empleadoId', 'jefeId']],
+  trabajadoresPersonal: ['trabajadoresPersonal', ['jefeId', 'id']],
   tesorerias: ['tesorerias', ['jefeId', 'tesoreroId']],
   tesoreriaSolicitudes: ['tesoreriaSolicitudes', ['jefeId', 'tesoreroId', 'estado']],
   tesoreriaMovimientos: ['tesoreriaMovimientos', ['tesoreriaId', 'tipo']]
