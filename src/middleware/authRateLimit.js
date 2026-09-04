@@ -31,7 +31,7 @@ function obtener(bucketMap, key, now) {
 
 function claveCuenta(req) {
   const username = String((req.body && req.body.username) || '').trim().toLowerCase();
-  return username ? `${req.ip}|${username}` : null;
+  return username || null;
 }
 
 function loginRateLimit(req, res, next) {
@@ -41,11 +41,10 @@ function loginRateLimit(req, res, next) {
   const accountKey = claveCuenta(req);
   const accountBucket = accountKey ? obtener(accountBuckets, accountKey, now) : null;
 
-  if (ipBucket.lockedUntil > now || (accountBucket && accountBucket.lockedUntil > now)) {
-    const retryAfter = Math.max(
-      1,
-      Math.ceil((Math.max(ipBucket.lockedUntil || 0, accountBucket?.lockedUntil || 0) - now) / 1000)
-    );
+  // El límite de intentos por IP protege al servidor, pero NO bloquea todas las cuentas.
+  // El bloqueo de 15 minutos pertenece únicamente a la cuenta que acumula fallos.
+  if (accountBucket && accountBucket.lockedUntil > now) {
+    const retryAfter = Math.max(1, Math.ceil((accountBucket.lockedUntil - now) / 1000));
     res.set('Retry-After', String(retryAfter));
     return res.status(429).json({ error: 'Demasiados intentos. Inténtalo de nuevo más tarde.' });
   }
@@ -61,14 +60,14 @@ function loginRateLimit(req, res, next) {
 
   req.authRateLimit = {
     registrarFallo() {
-      ipBucket.failures += 1;
-      if (accountBucket) accountBucket.failures += 1;
-      if (ipBucket.failures >= MAX_FAILURES_BEFORE_LOCK) ipBucket.lockedUntil = ahora() + LOCK_MS;
-      if (accountBucket && accountBucket.failures >= MAX_FAILURES_BEFORE_LOCK) accountBucket.lockedUntil = ahora() + LOCK_MS;
+      if (accountBucket) {
+        accountBucket.failures += 1;
+        if (accountBucket.failures >= MAX_FAILURES_BEFORE_LOCK) {
+          accountBucket.lockedUntil = ahora() + LOCK_MS;
+        }
+      }
     },
     registrarExito() {
-      ipBucket.failures = 0;
-      ipBucket.lockedUntil = 0;
       if (accountBucket) {
         accountBucket.failures = 0;
         accountBucket.lockedUntil = 0;
