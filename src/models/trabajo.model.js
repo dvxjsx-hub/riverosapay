@@ -62,14 +62,16 @@ function empleadosConTrabajosAsignados(jefeId) {
   const ids = [...new Set(db.turnos.filter(t => t.jefeAsignadoId === jefeId).map(t => t.empleadoId))];
   return ids.map(empleadoId => {
     const user = db.users.find(u => u.id === empleadoId);
+    const personal = db.trabajadoresPersonal.find(t => t.id === empleadoId && t.jefeId === jefeId);
     const turnos = db.turnos.filter(t => t.empleadoId === empleadoId && t.jefeAsignadoId === jefeId).map(enriquecerTurno);
     const idsLugares = new Set(turnos.map(t => t.lugarId));
     const lugares = db.lugares.filter(l => idsLugares.has(l.id));
     return {
       empleadoId,
-      empleadoUsername: user ? user.username : 'Empleado',
-      empleadoNombre: user ? (user.nombreCompleto || user.username) : 'Empleado',
-      puedeVerAgenda: puedeVerAgenda(jefeId, empleadoId),
+      empleadoTipo: personal ? 'personal' : 'usuario',
+      empleadoUsername: user ? user.username : '',
+      empleadoNombre: user ? (user.nombreCompleto || user.username) : (personal ? personal.nombre : 'Empleado'),
+      puedeVerAgenda: personal ? false : puedeVerAgenda(jefeId, empleadoId),
       lugares,
       turnos
     };
