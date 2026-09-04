@@ -8,5 +8,6 @@ router.use(requireUser);
 
 router.get('/:empleadoId', ah(evento.obtenerEventos));
 router.post('/:empleadoId', ah(evento.crearEvento));
+router.delete('/:empleadoId/:eventoId', ah(evento.eliminarEvento));
 
 module.exports = router;
