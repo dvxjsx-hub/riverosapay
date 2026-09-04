@@ -39,28 +39,29 @@ async function openBossAddTrabajo() {
 
   const opcionesAmistad = amistades.map(a => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.nombreCompleto || a.username)}</option>`).join('');
   const opcionesPersonal = personales.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.nombre)}</option>`).join('');
-  const tieneDestinos = amistades.length || personales.length;
+  const tieneAmistades = amistades.length > 0;
+  const tienePersonales = personales.length > 0;
 
   openModal('Añadir trabajo', `
     <label>Tipo de empleado<select id="boss-f-trabajo-tipo" onchange="cambiarTipoEmpleadoBoss()">
-      ${amistades.length ? '<option value="amistad">Amistad con cuenta</option>' : ''}
+      ${tieneAmistades ? '<option value="amistad">Amistad con cuenta</option>' : ''}
       <option value="personal">Personalizado</option>
     </select></label>
-    <div id="boss-f-trabajo-destino-wrap">
-      ${amistades.length ? `<label>Enviar a amistad<select id="boss-f-trabajo-amigo">${opcionesAmistad}</select></label>` : `<label>Nombre de referencia<input id="boss-f-trabajo-nombre" type="text" maxlength="80" placeholder="Ej. Carlos" required></label>`}
+    <div id="boss-f-trabajo-amistad-wrap" style="${tieneAmistades ? '' : 'display:none;'}">
+      <label>Enviar a amistad<select id="boss-f-trabajo-amigo">${opcionesAmistad}</select></label>
     </div>
-    <div id="boss-f-trabajo-nuevo-personal" style="display:none;">
-      <label>Nombre de referencia<input id="boss-f-trabajo-nombre" type="text" maxlength="80" placeholder="Ej. Carlos" required></label>
-    </div>
-    <div id="boss-f-trabajo-personal-existente" style="display:none;">
-      <label>Trabajador personalizado<select id="boss-f-trabajo-personal">${opcionesPersonal}</select></label>
+    <div id="boss-f-trabajo-personal-wrap" style="display:none;">
+      ${tienePersonales ? `<label>Trabajador personalizado<select id="boss-f-trabajo-personal" onchange="cambiarPersonalExistenteBoss()"><option value="__nuevo__">+ Nuevo trabajador personalizado</option>${opcionesPersonal}</select></label>` : ''}
+      <div id="boss-f-trabajo-nombre-wrap">
+        <label>Nombre de referencia<input id="boss-f-trabajo-nombre" type="text" maxlength="80" placeholder="Ej. Carlos" required></label>
+      </div>
     </div>
     <label>Lugar<input id="boss-f-trabajo-lugar" type="text" placeholder="Ej. Manga - Fontana" required></label>
     <label>Fecha<input id="boss-f-trabajo-fecha" type="date" required></label>
     <div class="row-2"><label>Hora inicio<input id="boss-f-trabajo-hi" type="time" required></label><label>Hora fin<input id="boss-f-trabajo-hf" type="time" required></label></div>
     <label>Descripción (opcional)<textarea id="boss-f-trabajo-desc" placeholder="Notas sobre este trabajo..."></textarea>
     <p class="field-error" id="boss-f-trabajo-error"></p>
-    <button class="btn-primary" type="button" onclick="submitBossTrabajo()">${tieneDestinos ? 'Añadir trabajo' : 'Crear trabajador y añadir trabajo'}</button>`);
+    <button class="btn-primary" id="boss-f-trabajo-submit" type="button" onclick="submitBossTrabajo()">Añadir trabajo</button>`);
   const fecha = $('#boss-f-trabajo-fecha');
   if (fecha && typeof fechaLocalISO === 'function') fecha.value = fechaLocalISO();
   cambiarTipoEmpleadoBoss();
@@ -68,33 +69,37 @@ async function openBossAddTrabajo() {
 
 function cambiarTipoEmpleadoBoss() {
   const tipo = $('#boss-f-trabajo-tipo')?.value || 'personal';
-  const wrap = $('#boss-f-trabajo-destino-wrap');
-  const nuevo = $('#boss-f-trabajo-nuevo-personal');
-  const existente = $('#boss-f-trabajo-personal-existente');
-  if (!wrap || !nuevo || !existente) return;
-  if (tipo === 'amistad') {
-    wrap.style.display = '';
-    nuevo.style.display = 'none';
-    existente.style.display = 'none';
-  } else {
-    wrap.style.display = 'none';
-    nuevo.style.display = '';
-    existente.style.display = 'none';
-  }
+  const amistad = $('#boss-f-trabajo-amistad-wrap');
+  const personal = $('#boss-f-trabajo-personal-wrap');
+  if (!amistad || !personal) return;
+  amistad.style.display = tipo === 'amistad' ? '' : 'none';
+  personal.style.display = tipo === 'personal' ? '' : 'none';
+  if (tipo === 'personal') cambiarPersonalExistenteBoss();
+  const btn = $('#boss-f-trabajo-submit');
+  if (btn) btn.textContent = tipo === 'amistad' ? 'Enviar trabajo' : 'Añadir trabajo personalizado';
+}
+
+function cambiarPersonalExistenteBoss() {
+  const select = $('#boss-f-trabajo-personal');
+  const nombreWrap = $('#boss-f-trabajo-nombre-wrap');
+  if (!select || !nombreWrap) return;
+  const esNuevo = select.value === '__nuevo__';
+  nombreWrap.style.display = esNuevo ? '' : 'none';
 }
 
 async function submitBossTrabajo() {
   const tipo = $('#boss-f-trabajo-tipo')?.value || 'personal';
   const empleadoId = tipo === 'amistad' ? $('#boss-f-trabajo-amigo')?.value : null;
-  const nombre = tipo === 'personal' ? $('#boss-f-trabajo-nombre')?.value.trim() : '';
+  const trabajadorId = tipo === 'personal' && $('#boss-f-trabajo-personal')?.value !== '__nuevo__' ? $('#boss-f-trabajo-personal')?.value : '';
+  const nombre = tipo === 'personal' && !trabajadorId ? $('#boss-f-trabajo-nombre')?.value.trim() : '';
   const lugar = $('#boss-f-trabajo-lugar')?.value.trim();
   const fecha = $('#boss-f-trabajo-fecha')?.value;
   const hi = $('#boss-f-trabajo-hi')?.value;
   const hf = $('#boss-f-trabajo-hf')?.value;
   const descripcion = $('#boss-f-trabajo-desc')?.value.trim() || '';
   const err = $('#boss-f-trabajo-error');
-  if ((tipo === 'amistad' && !empleadoId) || (tipo === 'personal' && !nombre) || !lugar || !fecha || !hi || !hf) {
-    if (err) err.textContent = tipo === 'amistad' ? 'Completa amistad, lugar, fecha y horario.' : 'Completa nombre, lugar, fecha y horario.';
+  if ((tipo === 'amistad' && !empleadoId) || (tipo === 'personal' && !trabajadorId && !nombre) || !lugar || !fecha || !hi || !hf) {
+    if (err) err.textContent = tipo === 'amistad' ? 'Completa amistad, lugar, fecha y horario.' : 'Selecciona un trabajador o escribe un nombre, además de lugar, fecha y horario.';
     return;
   }
   const inicio = new Date(`${fecha}T${hi}`); const fin = new Date(`${fecha}T${hf}`);
@@ -110,13 +115,13 @@ async function submitBossTrabajo() {
       toast('Trabajo enviado. Esperando aceptación.');
     } else {
       await api.post(`/api/trabajo/jefe/${STATE.user.id}/personal`, {
-        nombre, lugar, fecha,
+        trabajadorId, nombre, lugar, fecha,
         dia: new Intl.DateTimeFormat('es-CO', { weekday: 'long' }).format(new Date(`${fecha}T12:00:00`)),
         horaInicio: hi, horaFin: hf, descripcion
       });
       closeModal();
       await loadHistorial();
-      toast('Trabajador personalizado y trabajo añadidos.');
+      toast(trabajadorId ? 'Trabajo añadido al trabajador personalizado.' : 'Trabajador personalizado y trabajo añadidos.');
     }
   } catch (ex) { if (err) err.textContent = ex.message; }
 }
