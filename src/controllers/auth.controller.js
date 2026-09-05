@@ -2,6 +2,7 @@ const { db, save } = require('../config/db');
 const usuarios = require('../models/usuarios.model');
 const { hashPassword, verifyPassword, newId, newShareCode, newFriendCode, USERNAME_REGEX, PASSWORD_REGEX, hashRecoveryCode, newRecoveryCode } = require('../utils/utils');
 const { COOKIE_NAME, createSession, setSessionCookie, clearSessionCookie, readSession, destroySession, destroyUserSessions } = require('../middleware/session');
+const auditoria = require('../models/auditoria.model');
 
 async function registrar(req, res) {
   const { username, password } = req.body || {};
@@ -15,6 +16,7 @@ async function registrar(req, res) {
   const now = new Date().toISOString();
   const user = { id: newId('u'), username: uname, password: await hashPassword(password), role: 'empleado', shareCode: newShareCode(db), modoActual: 'empleado', codigoAmistad: newFriendCode(db), nombreCompleto: null, esEstudiante: true, recoveryCodeHash: hashRecoveryCode(recoveryCode), createdAt: now, lastLoginAt: now };
   usuarios.crear(user); await save();
+  await auditoria.registrar({ actorId: user.id, actorType: 'user', action: 'crear_cuenta', resource: 'usuario', resourceId: user.id });
   const sessionToken = await createSession({ type: 'user', userId: user.id });
   setSessionCookie(res, sessionToken);
   res.json({ ...usuarios.publicUser(user), recoveryCode });
@@ -27,7 +29,9 @@ async function recuperar(req, res) {
   if (!PASSWORD_REGEX.test(newPassword || '')) return res.status(400).json({ error: 'La nueva clave debe tener exactamente 6 dígitos.' });
   user.password = await hashPassword(newPassword);
   await destroyUserSessions(user.id);
-  await save(); res.json({ ok: true });
+  await save();
+  await auditoria.registrar({ actorId: user.id, actorType: 'user', action: 'recuperar_cuenta', resource: 'usuario', resourceId: user.id });
+  res.json({ ok: true });
 }
 
 async function configurarNombre(req, res) {
@@ -35,7 +39,9 @@ async function configurarNombre(req, res) {
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
   const limpio = (nombreCompleto || '').trim().replace(/\s+/g, ' ');
   if (!/^[A-Za-zÀ-ÿÑñ]+ [A-Za-zÀ-ÿÑñ]+$/.test(limpio)) return res.status(400).json({ error: 'Ingresa un nombre y un apellido separados por un solo espacio.' });
-  user.nombreCompleto = limpio; await save(); res.json(usuarios.publicUser(user));
+  user.nombreCompleto = limpio; await save();
+  await auditoria.registrar({ actorId: user.id, actorType: 'user', action: 'cambiar_nombre', resource: 'usuario', resourceId: user.id });
+  res.json(usuarios.publicUser(user));
 }
 
 async function preferencias(req, res) {
@@ -43,14 +49,18 @@ async function preferencias(req, res) {
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
   if (typeof esEstudiante === 'boolean') user.esEstudiante = esEstudiante;
   if (typeof recibirNotificaciones === 'boolean') user.recibirNotificaciones = recibirNotificaciones;
-  await save(); res.json(usuarios.publicUser(user));
+  await save();
+  await auditoria.registrar({ actorId: user.id, actorType: 'user', action: 'cambiar_preferencias', resource: 'usuario', resourceId: user.id });
+  res.json(usuarios.publicUser(user));
 }
 
 async function cambiarModo(req, res) {
   const { modo } = req.body || {};
   if (!['empleado', 'jefe'].includes(modo)) return res.status(400).json({ error: 'Modo inválido.' });
   const user = usuarios.buscarPorId(req.userId); if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
-  user.modoActual = modo; await save(); res.json(usuarios.publicUser(user));
+  user.modoActual = modo; await save();
+  await auditoria.registrar({ actorId: user.id, actorType: 'user', action: 'cambiar_modo', resource: 'usuario', resourceId: user.id });
+  res.json(usuarios.publicUser(user));
 }
 
 async function cambiarClave(req, res) {
@@ -65,6 +75,7 @@ async function cambiarClave(req, res) {
   const recoveryCode = newRecoveryCode();
   user.recoveryCodeHash = hashRecoveryCode(recoveryCode);
   await save();
+  await auditoria.registrar({ actorId: user.id, actorType: 'user', action: 'cambiar_clave', resource: 'usuario', resourceId: user.id });
   res.json({ ...usuarios.publicUser(user), recoveryCode });
 }
 
@@ -77,6 +88,7 @@ async function obtenerNuevoCodigoRecuperacion(req, res) {
   const recoveryCode = newRecoveryCode();
   user.recoveryCodeHash = hashRecoveryCode(recoveryCode);
   await save();
+  await auditoria.registrar({ actorId: user.id, actorType: 'user', action: 'renovar_codigo_recuperacion', resource: 'usuario', resourceId: user.id });
   res.json({ recoveryCode });
 }
 
@@ -100,6 +112,7 @@ async function eliminarCuenta(req, res) {
   const actual = await verifyPassword(password || '', user.password);
   if (!actual.valid) return res.status(401).json({ error: 'Contraseña incorrecta.' });
   await eliminarDatosCuenta(req.userId);
+  await auditoria.registrar({ actorId: req.userId, actorType: 'user', action: 'eliminar_cuenta', resource: 'usuario', resourceId: req.userId });
   clearSessionCookie(res); res.json({ ok: true });
 }
 
@@ -110,6 +123,7 @@ async function login(req, res) {
     req.authRateLimit?.registrarExito();
     const sessionToken = await createSession({ type: 'admin' });
     setSessionCookie(res, sessionToken);
+    await auditoria.registrar({ actorId: 'admin', actorType: 'admin', action: 'inicio_sesion', resource: 'sesion' });
     return res.json({ tipo: 'admin' });
   }
   if (!PASSWORD_REGEX.test(password || '')) { req.authRateLimit?.registrarFallo(); return res.status(401).json({ error: 'Usuario o clave incorrectos.' }); }
@@ -120,13 +134,17 @@ async function login(req, res) {
   req.authRateLimit?.registrarExito();
   if (actual.legacy) user.password = await hashPassword(password);
   user.lastLoginAt = new Date().toISOString(); await save();
+  await auditoria.registrar({ actorId: user.id, actorType: 'user', action: 'inicio_sesion', resource: 'sesion' });
   const sessionToken = await createSession({ type: 'user', userId: user.id });
   setSessionCookie(res, sessionToken); res.json(usuarios.publicUser(user));
 }
 
 async function logout(req, res) {
   const match = (req.headers.cookie || '').match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]+)`));
+  const session = req.session || await readSession(req);
   if (match) await destroySession(decodeURIComponent(match[1]));
+  if (session?.userId) await auditoria.registrar({ actorId: session.userId, actorType: 'user', action: 'cerrar_sesion', resource: 'sesion' });
+  else if (session?.type === 'admin') await auditoria.registrar({ actorId: 'admin', actorType: 'admin', action: 'cerrar_sesion', resource: 'sesion' });
   clearSessionCookie(res); res.json({ ok: true });
 }
 
@@ -136,7 +154,9 @@ async function elegirRol(req, res) {
   const user = usuarios.buscarPorId(req.userId); if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
   if (user.role) return res.status(400).json({ error: 'Ya tienes un perfil configurado.' });
   user.role = role; if (role === 'empleado') user.shareCode = newShareCode(db); user.modoActual = role;
-  if (!user.codigoAmistad) user.codigoAmistad = newFriendCode(db); await save(); res.json(usuarios.publicUser(user));
+  if (!user.codigoAmistad) user.codigoAmistad = newFriendCode(db); await save();
+  await auditoria.registrar({ actorId: user.id, actorType: 'user', action: 'elegir_rol', resource: 'usuario', resourceId: user.id });
+  res.json(usuarios.publicUser(user));
 }
 
 module.exports = { registrar, recuperar, configurarNombre, preferencias, cambiarModo, cambiarClave, obtenerNuevoCodigoRecuperacion, eliminarCuenta, eliminarDatosCuenta, login, logout, elegirRol }; 
