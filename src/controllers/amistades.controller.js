@@ -69,6 +69,7 @@ async function responder(req, res) {
   }
   const tipo = accion === 'aceptar' ? 'amistad_aceptada' : 'amistad_rechazada';
   amistades.eliminarSolicitud(solicitud.id);
+  notificaciones.eliminarSolicitudAmistad(actorId, solicitud.id);
   await save();
   await auditoria.registrar({ actorId, actorType: 'user', action: accion === 'aceptar' ? 'aceptar_solicitud_amistad' : 'rechazar_solicitud_amistad', resource: 'amistad_solicitud', resourceId: solicitud.id });
   await notificaciones.crearParaUsuario(emisor.id, tipo, {
