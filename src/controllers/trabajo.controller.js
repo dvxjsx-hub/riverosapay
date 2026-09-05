@@ -5,6 +5,7 @@ const trabajoSolicitudes = require('../models/trabajoSolicitudes.model');
 const verificacion = require('../models/verificacion.model');
 const notificaciones = require('../models/notificaciones.model');
 const usuarios = require('../models/usuarios.model');
+const auditoria = require('../models/auditoria.model');
 const { newId } = require('../utils/utils');
 
 function usuarioActual(req) { return req.userId || (req.session && req.session.userId) || null; }
@@ -89,6 +90,7 @@ async function crearSolicitudTrabajo(req, res) {
     horaInicio, horaFin, descripcion
   });
   await save();
+  await auditoria.registrar({ actorId: jefeId, actorType: 'user', action: 'enviar_solicitud_trabajo', resource: 'trabajo_solicitud', resourceId: solicitud.id });
   await notificaciones.crearParaUsuario(empleadoId, 'trabajo_solicitud', {
     modoDestino: 'empleado', trabajoSolicitudId: solicitud.id,
     jefeId, jefeUsername: jefe.username, jefeNombre: jefe.nombreCompleto || jefe.username,
@@ -128,6 +130,7 @@ async function responderSolicitudTrabajo(req, res) {
   }
 
   await save();
+  await auditoria.registrar({ actorId: empleadoId, actorType: 'user', action: accion === 'aceptar' ? 'aceptar_solicitud_trabajo' : 'rechazar_solicitud_trabajo', resource: 'trabajo_solicitud', resourceId: solicitud.id });
   if (accion === 'aceptar') {
     trabajo.broadcast(empleadoId);
     await notificaciones.crearParaUsuario(solicitud.jefeId, 'trabajo_solicitud_aceptada', {
@@ -174,6 +177,9 @@ async function actualizarTurno(req, res) {
   trabajo.broadcast(turno.empleadoId);
 
   const lug = trabajo.buscarLugarPorId(turno.lugarId);
+  if (req.body.jefeAsignadoId !== undefined && anteriorJefe !== turno.jefeAsignadoId) {
+    await auditoria.registrar({ actorId, actorType: 'user', action: turno.jefeAsignadoId ? 'asignar_boss_trabajo' : 'quitar_boss_trabajo', resource: 'trabajo', resourceId: turno.id });
+  }
   if (turno.pagado && !yaEstabaPagado && req.body.actorJefeUsername) await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_pagado', { jefeUsername: req.body.actorJefeUsername, lugar: lug ? lug.nombre : '' });
   if (req.body.jefeAsignadoId !== undefined && anteriorJefe !== turno.jefeAsignadoId && turno.jefeAsignadoId && turno.jefeAsignadoId !== turno.empleadoId) {
     const empleado = usuarios.buscarPorId(turno.empleadoId);
@@ -193,6 +199,7 @@ async function actualizarPermisoAgenda(req, res) {
   turno.puedeVerAgendaJefe = req.body.puedeVerAgendaJefe;
   await save();
   trabajo.broadcast(turno.empleadoId);
+  await auditoria.registrar({ actorId, actorType: 'user', action: turno.puedeVerAgendaJefe ? 'conceder_acceso_agenda_boss' : 'revocar_acceso_agenda_boss', resource: 'trabajo', resourceId: turno.id });
   res.json({ ok: true, turno });
 }
 
@@ -232,14 +239,16 @@ async function eliminarTurno(req, res) {
 
   if (esBossAsignado) {
     trabajo.eliminarTurno(turno.id); await save(); trabajo.broadcast(turno.empleadoId);
+    await auditoria.registrar({ actorId, actorType: 'user', action: 'eliminar_trabajo_boss', resource: 'trabajo', resourceId: turno.id });
     await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_eliminado', { jefeUsername: req.body.actorJefeUsername || 'Tu BOSS', lugar: lug ? lug.nombre : '' });
     return res.json({ eliminado: true });
   }
 
-  if (turno.pagado || !turno.jefeAsignadoId) { trabajo.eliminarTurno(turno.id); await save(); trabajo.broadcast(turno.empleadoId); return res.json({ eliminado: true }); }
+  if (turno.pagado || !turno.jefeAsignadoId) { trabajo.eliminarTurno(turno.id); await save(); trabajo.broadcast(turno.empleadoId); await auditoria.registrar({ actorId, actorType: 'user', action: 'eliminar_trabajo_empleado', resource: 'trabajo', resourceId: turno.id }); return res.json({ eliminado: true }); }
   turno.eliminacionPendiente = true;
   await save();
   trabajo.broadcast(turno.empleadoId);
+  await auditoria.registrar({ actorId, actorType: 'user', action: 'solicitar_eliminacion_trabajo', resource: 'trabajo', resourceId: turno.id });
   await notificaciones.crearParaUsuario(turno.jefeAsignadoId, 'trabajo_eliminacion_solicitada', { empleadoUsername: (usuarios.buscarPorId(turno.empleadoId) || {}).username || '', lugar: lug ? lug.nombre : '', modoDestino: 'jefe' });
   res.json({ eliminado: false, pendiente: true });
 }
@@ -249,6 +258,7 @@ async function confirmarEliminacion(req, res) {
   const actorId = usuarioActual(req);
   if (actorId !== turno.jefeAsignadoId) return res.status(403).json({ error: 'Solo el BOSS asignado puede confirmar esta eliminación.' });
   const lug = trabajo.buscarLugarPorId(turno.lugarId); trabajo.eliminarTurno(turno.id); await save(); trabajo.broadcast(turno.empleadoId);
+  await auditoria.registrar({ actorId, actorType: 'user', action: 'confirmar_eliminacion_trabajo', resource: 'trabajo', resourceId: turno.id });
   await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_eliminado', { jefeUsername: req.body.jefeUsername || 'Tu BOSS', lugar: lug ? lug.nombre : '' }); res.json({ eliminado: true });
 }
 
@@ -256,7 +266,7 @@ async function rechazarEliminacion(req, res) {
   const turno = trabajo.buscarTurnoPorId(req.params.turnoId); if (!turno) return res.status(404).json({ error: 'Trabajo no encontrado.' });
   const actorId = usuarioActual(req);
   if (actorId !== turno.jefeAsignadoId) return res.status(403).json({ error: 'Solo el BOSS asignado puede rechazar esta eliminación.' });
-  turno.eliminacionPendiente = false; await save(); trabajo.broadcast(turno.empleadoId); await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_eliminacion_rechazada', { jefeUsername: req.body.jefeUsername || 'Tu BOSS' }); res.json({ eliminado: false });
+  turno.eliminacionPendiente = false; await save(); trabajo.broadcast(turno.empleadoId); await auditoria.registrar({ actorId, actorType: 'user', action: 'rechazar_eliminacion_trabajo', resource: 'trabajo', resourceId: turno.id }); await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_eliminacion_rechazada', { jefeUsername: req.body.jefeUsername || 'Tu BOSS' }); res.json({ eliminado: false });
 }
 
 module.exports = { obtenerSnapshot, obtenerMisJefes, obtenerTrabajosComoJefe, crearTurno, crearSolicitudTrabajo, responderSolicitudTrabajo, actualizarTurno, actualizarPermisoAgenda, finalizarTurno, eliminarTurno, confirmarEliminacion, rechazarEliminacion };
