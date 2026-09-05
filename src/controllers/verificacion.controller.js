@@ -42,7 +42,7 @@ async function responderSolicitud(req, res) {
   if (solicitud.estado === 'aceptado') {
     const empleado = usuarios.buscarPorId(solicitud.empleadoId);
     if (!empleado) return res.status(404).json({ error: 'Empleado no encontrado.' });
-    link = verificacion.crearOActualizarLink({ id: newId('lnk'), jefeId: solicitud.jefeId, jefeUsername: solicitud.jefeUsername, empleadoId: solicitud.empleadoId, empleadoUsername: empleado.username, fecha: Date.now() });
+    link = verificacion.crearOActualizarLink({ id: newId('lnk'), jefeId: solicitud.jefeId, jefeUsername: solicitud.jefeUsername, empleadoId: solicitud.empleadoId, empleadoUsername: empleado.username, fecha: Date.now(), puedeVerAgenda: false });
   }
   await save();
   await auditoria.registrar({ actorId: solicitud.empleadoId, actorType: 'user', action: accion === 'aceptar' ? 'aceptar_vinculo_boss' : 'rechazar_vinculo_boss', resource: 'vinculo_boss', resourceId: solicitud.jefeId });
@@ -57,6 +57,20 @@ async function historial(req, res) {
   res.json(verificacion.historialDe(req.params.jefeId));
 }
 
+async function actualizarPermisoAgendaGeneral(req, res) {
+  const empleadoId = usuarioActual(req);
+  const jefeId = String(req.params.jefeId || '');
+  if (!jefeId || jefeId === empleadoId) return res.status(400).json({ error: 'El BOSS seleccionado no es válido.' });
+  const link = verificacion.buscarLink(jefeId, empleadoId);
+  if (!link) return res.status(403).json({ error: 'Solo puedes cambiar el permiso de un BOSS vinculado contigo.' });
+  if (typeof req.body?.puedeVerAgenda !== 'boolean') return res.status(400).json({ error: 'El permiso de agenda no es válido.' });
+  link.puedeVerAgenda = req.body.puedeVerAgenda;
+  await save();
+  await auditoria.registrar({ actorId: empleadoId, actorType: 'user', action: link.puedeVerAgenda ? 'conceder_acceso_agenda_boss' : 'revocar_acceso_agenda_boss', resource: 'vinculo_boss', resourceId: jefeId });
+  getIO().to('jefe-' + jefeId).emit('notificaciones:update');
+  res.json({ ok: true, puedeVerAgenda: link.puedeVerAgenda });
+}
+
 async function datosEmpleado(req, res) {
   const jefeId = String(req.query.jefeId || '');
   const actorId = usuarioActual(req);
@@ -65,7 +79,7 @@ async function datosEmpleado(req, res) {
   if (!verificacion.tieneAcceso(jefeId, empleadoId) && !trabajo.tieneTrabajoAsignado(jefeId, empleadoId)) return res.status(403).json({ error: 'No tienes acceso a este trabajo.' });
   const empleado = usuarios.buscarPorId(empleadoId);
   const link = verificacion.buscarLink(jefeId, empleadoId);
-  res.json({ empleadoUsername: empleado ? empleado.username : (link && link.empleadoUsername), esEstudiante: empleado ? (empleado.esEstudiante === undefined ? null : empleado.esEstudiante) : null, puedeVerAgenda: trabajo.puedeVerAgenda(jefeId, empleadoId), ...trabajo.snapshot(empleadoId) });
+  res.json({ empleadoUsername: empleado ? empleado.username : (link && link.empleadoUsername), esEstudiante: empleado ? (empleado.esEstudiante === undefined ? null : empleado.esEstudiante) : null, puedeVerAgenda: verificacion.puedeVerAgenda(jefeId, empleadoId), ...trabajo.snapshot(empleadoId) });
 }
 
 function validarAccesoAgenda(req) {
@@ -74,7 +88,7 @@ function validarAccesoAgenda(req) {
   const empleadoId = req.params.empleadoId;
   if (jefeId !== actorId) return { ok: false, status: 403, error: 'La identidad del BOSS no coincide con la sesión.' };
   if (!verificacion.tieneAcceso(jefeId, empleadoId) && !trabajo.tieneTrabajoAsignado(jefeId, empleadoId)) return { ok: false, status: 403, error: 'No tienes acceso a este empleado.' };
-  if (!trabajo.puedeVerAgenda(jefeId, empleadoId)) return { ok: false, status: 403, error: 'El empleado no ha permitido que veas sus Académicos y Eventos.' };
+  if (!verificacion.puedeVerAgenda(jefeId, empleadoId)) return { ok: false, status: 403, error: 'El empleado no ha permitido que veas sus Académicos y Eventos.' };
   return { ok: true, jefeId, empleadoId };
 }
 
@@ -90,4 +104,4 @@ async function eventoEmpleado(req, res) {
   res.json(evento.eventosDe(acceso.empleadoId));
 }
 
-module.exports = { obtenerCodigo, enviarSolicitud, listarNotificaciones, marcarLeidas, solicitudesPendientes, responderSolicitud, historial, datosEmpleado, estudioEmpleado, eventoEmpleado };
+module.exports = { obtenerCodigo, enviarSolicitud, listarNotificaciones, marcarLeidas, solicitudesPendientes, responderSolicitud, historial, actualizarPermisoAgendaGeneral, datosEmpleado, estudioEmpleado, eventoEmpleado };
