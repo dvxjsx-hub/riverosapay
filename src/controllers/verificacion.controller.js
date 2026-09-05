@@ -61,7 +61,13 @@ async function actualizarPermisoAgendaGeneral(req, res) {
   const empleadoId = usuarioActual(req);
   const jefeId = String(req.params.jefeId || '');
   if (!jefeId || jefeId === empleadoId) return res.status(400).json({ error: 'El BOSS seleccionado no es válido.' });
-  const link = verificacion.buscarLink(jefeId, empleadoId);
+  let link = verificacion.buscarLink(jefeId, empleadoId);
+  if (!link && trabajo.tieneTrabajoAsignado(jefeId, empleadoId)) {
+    const jefe = usuarios.buscarPorId(jefeId);
+    if (!jefe) return res.status(404).json({ error: 'El BOSS seleccionado ya no existe.' });
+    const empleado = usuarios.buscarPorId(empleadoId);
+    link = verificacion.crearOActualizarLink({ id: newId('lnk'), jefeId, jefeUsername: jefe.username, empleadoId, empleadoUsername: empleado ? empleado.username : '', fecha: Date.now(), puedeVerAgenda: false });
+  }
   if (!link) return res.status(403).json({ error: 'Solo puedes cambiar el permiso de un BOSS vinculado contigo.' });
   if (typeof req.body?.puedeVerAgenda !== 'boolean') return res.status(400).json({ error: 'El permiso de agenda no es válido.' });
   link.puedeVerAgenda = req.body.puedeVerAgenda;
