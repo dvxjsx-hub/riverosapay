@@ -2,6 +2,7 @@ const { db, save } = require('../config/db');
 const usuarios = require('../models/usuarios.model');
 const amistades = require('../models/amistades.model');
 const notificaciones = require('../models/notificaciones.model');
+const auditoria = require('../models/auditoria.model');
 const { newFriendCode } = require('../utils/utils');
 
 function asegurarCodigoAmistad(user) {
@@ -43,6 +44,7 @@ async function agregar(req, res) {
 
   const solicitud = amistades.crearSolicitud(usuario.id, usuario.username, amigo.id, amigo.username);
   await save();
+  await auditoria.registrar({ actorId: usuario.id, actorType: 'user', action: 'enviar_solicitud_amistad', resource: 'amistad_solicitud', resourceId: solicitud.id });
   await notificaciones.crearParaUsuario(amigo.id, 'amistad_solicitud', {
     modoDestino: amigo.modoActual === 'jefe' ? 'jefe' : 'empleado', solicitudId: solicitud.id,
     solicitanteId: usuario.id, solicitanteUsername: usuario.username, solicitanteNombre: usuario.nombreCompleto || null
@@ -68,6 +70,7 @@ async function responder(req, res) {
   const tipo = accion === 'aceptar' ? 'amistad_aceptada' : 'amistad_rechazada';
   amistades.eliminarSolicitud(solicitud.id);
   await save();
+  await auditoria.registrar({ actorId, actorType: 'user', action: accion === 'aceptar' ? 'aceptar_solicitud_amistad' : 'rechazar_solicitud_amistad', resource: 'amistad_solicitud', resourceId: solicitud.id });
   await notificaciones.crearParaUsuario(emisor.id, tipo, {
     modoDestino: emisor.modoActual === 'jefe' ? 'jefe' : 'empleado', solicitudId: solicitud.id,
     amigoId: receptor.id, amigoUsername: receptor.username, amigoNombre: receptor.nombreCompleto || null
@@ -85,6 +88,7 @@ async function eliminar(req, res) {
   const amigo = usuarios.buscarPorId(amistadId);
   amistades.eliminarEntre(actorId, amistadId);
   await save();
+  await auditoria.registrar({ actorId, actorType: 'user', action: 'eliminar_amistad', resource: 'amistad', resourceId: amistadId });
   if (amigo && usuario) await notificaciones.crearParaUsuario(amigo.id, 'amistad_eliminada', {
     modoDestino: amigo.modoActual === 'jefe' ? 'jefe' : 'empleado', amigoId: usuario.id,
     amigoUsername: usuario.username, amigoNombre: usuario.nombreCompleto || null
