@@ -1,6 +1,7 @@
 const { save } = require('../config/db');
 const trabajo = require('../models/trabajo.model');
 const { getIO } = require('../realtime/io');
+const auditoria = require('../models/auditoria.model');
 
 function usuarioActual(req) { return req.userId || (req.session && req.session.userId) || null; }
 
@@ -39,6 +40,13 @@ async function congelarTrabajo(req, res) {
     turno.finalizadoAt = turno.finalizadoAt || new Date().toISOString();
   }
   await save();
+  await auditoria.registrar({
+    actorId,
+    actorType: 'user',
+    action: 'congelar_trabajo',
+    resource: 'trabajo',
+    resourceId: turno.id
+  });
   trabajo.broadcast(turno.empleadoId);
 
   try { getIO().to('jefe-' + actorId).emit('trabajo:update'); } catch (_) {}
