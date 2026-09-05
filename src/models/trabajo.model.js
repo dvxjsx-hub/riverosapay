@@ -47,7 +47,27 @@ function eliminarTurno(id) {
 }
 
 function misJefes(empleadoId) {
-  return db.links.filter(l => l.empleadoId === empleadoId).map(l => ({ jefeId: l.jefeId, jefeUsername: l.jefeUsername, puedeVerAgenda: l.puedeVerAgenda === true }));
+  const links = new Map();
+  db.links.filter(l => l.empleadoId === empleadoId).forEach(l => {
+    links.set(l.jefeId, {
+      jefeId: l.jefeId,
+      jefeUsername: l.jefeUsername,
+      puedeVerAgenda: l.puedeVerAgenda === true
+    });
+  });
+
+  // Un BOSS con un trabajo asignado también es un vínculo laboral válido.
+  db.turnos.filter(t => t.empleadoId === empleadoId && t.jefeAsignadoId).forEach(t => {
+    if (links.has(t.jefeAsignadoId)) return;
+    const jefe = db.users.find(u => u.id === t.jefeAsignadoId);
+    links.set(t.jefeAsignadoId, {
+      jefeId: t.jefeAsignadoId,
+      jefeUsername: jefe ? jefe.username : 'BOSS',
+      puedeVerAgenda: puedeVerAgenda(t.jefeAsignadoId, empleadoId)
+    });
+  });
+
+  return Array.from(links.values());
 }
 
 function tieneTrabajoAsignado(jefeId, empleadoId) {
