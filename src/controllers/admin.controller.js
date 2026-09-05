@@ -1,6 +1,7 @@
 const { db, save } = require('../config/db');
 const usuarios = require('../models/usuarios.model');
 const { eliminarDatosCuenta } = require('./auth.controller');
+const auditoria = require('../models/auditoria.model');
 
 function cuentas(req, res) {
   const lista = db.users.map(u => ({
@@ -21,6 +22,7 @@ async function cambiarVerificacion(req, res) {
   if (typeof req.body?.verificada !== 'boolean') return res.status(400).json({ error: 'El estado de verificación no es válido.' });
   user.verificada = req.body.verificada;
   await save();
+  await auditoria.registrar({ actorId: req.session?.userId || 'admin', actorType: 'admin', action: user.verificada ? 'verificar_cuenta' : 'quitar_verificacion', resource: 'usuario', resourceId: user.id });
   res.json({ ok: true, verificada: user.verificada });
 }
 
@@ -29,6 +31,7 @@ async function eliminar(req, res) {
   const user = usuarios.buscarPorId(userId);
   if (!user) return res.status(404).json({ error: 'Cuenta no encontrada.' });
   await eliminarDatosCuenta(userId);
+  await auditoria.registrar({ actorId: req.session?.userId || 'admin', actorType: 'admin', action: 'eliminar_cuenta', resource: 'usuario', resourceId: userId });
   res.json({ ok: true });
 }
 
