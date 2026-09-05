@@ -6,6 +6,7 @@ const trabajo = require('../models/trabajo.model');
 const estudio = require('../models/estudio.model');
 const evento = require('../models/evento.model');
 const notificaciones = require('../models/notificaciones.model');
+const auditoria = require('../models/auditoria.model');
 const { newId } = require('../utils/utils');
 
 function usuarioActual(req) { return req.userId || (req.session && req.session.userId) || null; }
@@ -44,6 +45,7 @@ async function responderSolicitud(req, res) {
     link = verificacion.crearOActualizarLink({ id: newId('lnk'), jefeId: solicitud.jefeId, jefeUsername: solicitud.jefeUsername, empleadoId: solicitud.empleadoId, empleadoUsername: empleado.username, fecha: Date.now() });
   }
   await save();
+  await auditoria.registrar({ actorId: solicitud.empleadoId, actorType: 'user', action: accion === 'aceptar' ? 'aceptar_vinculo_boss' : 'rechazar_vinculo_boss', resource: 'vinculo_boss', resourceId: solicitud.jefeId });
   getIO().to('jefe-' + solicitud.jefeId).emit('join:result', { solicitud, link });
   if (solicitud.estado === 'aceptado') await notificaciones.crearParaUsuario(solicitud.empleadoId, 'jefe_configurado', { jefeUsername: solicitud.jefeUsername });
   else getIO().to('emp-' + solicitud.empleadoId).emit('notificaciones:update');
