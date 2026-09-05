@@ -36,6 +36,16 @@ async function crear(empleadoId, tipo, extra) {
   return crearParaUsuario(empleadoId, tipo, { empleadoId, ...extra });
 }
 
+function eliminarSolicitudAmistad(usuarioId, solicitudId) {
+  const antes = db.notificaciones.length;
+  db.notificaciones = db.notificaciones.filter(n => !(
+    n.usuarioId === usuarioId &&
+    n.tipo === 'amistad_solicitud' &&
+    n.solicitudId === solicitudId
+  ));
+  return antes !== db.notificaciones.length;
+}
+
 function listaCompleta(usuarioId) {
   const joinRequestsModel = require('./verificacion.model');
   const solicitudes = joinRequestsModel.solicitudesNoAceptadas(usuarioId)
@@ -58,4 +68,4 @@ function marcarLeidas(usuarioId, modo = null) {
     .forEach(n => { n.leida = true; });
 }
 
-module.exports = { crear, crearParaUsuario, listaCompleta, marcarLeidas, modoDestino };
+module.exports = { crear, crearParaUsuario, listaCompleta, marcarLeidas, modoDestino, eliminarSolicitudAmistad };
