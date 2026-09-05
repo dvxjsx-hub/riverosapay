@@ -28,11 +28,20 @@ function buscarLink(jefeId, empleadoId) {
 function crearOActualizarLink(link) {
   const existente = buscarLink(link.jefeId, link.empleadoId);
   if (!existente) {
-    db.links.push(link);
+    db.links.push({ puedeVerAgenda: false, ...link });
     return link;
   }
   existente.fecha = Date.now();
+  if (existente.puedeVerAgenda === undefined) existente.puedeVerAgenda = false;
   return existente;
+}
+
+function puedeVerAgenda(jefeId, empleadoId) {
+  const link = buscarLink(jefeId, empleadoId);
+  if (!link) return false;
+  if (typeof link.puedeVerAgenda === 'boolean') return link.puedeVerAgenda;
+  // Compatibilidad con permisos antiguos guardados por trabajo.
+  return db.turnos.some(t => t.empleadoId === empleadoId && t.jefeAsignadoId === jefeId && t.puedeVerAgendaJefe === true);
 }
 
 function historialDe(jefeId) {
@@ -42,5 +51,5 @@ function historialDe(jefeId) {
 module.exports = {
   tieneAcceso,
   crearSolicitud, buscarSolicitud, solicitudesPendientes, solicitudesNoAceptadas,
-  buscarLink, crearOActualizarLink, historialDe
+  buscarLink, crearOActualizarLink, historialDe, puedeVerAgenda
 };
