@@ -47,7 +47,7 @@ function eliminarTurno(id) {
 }
 
 function misJefes(empleadoId) {
-  return db.links.filter(l => l.empleadoId === empleadoId).map(l => ({ jefeId: l.jefeId, jefeUsername: l.jefeUsername }));
+  return db.links.filter(l => l.empleadoId === empleadoId).map(l => ({ jefeId: l.jefeId, jefeUsername: l.jefeUsername, puedeVerAgenda: l.puedeVerAgenda === true }));
 }
 
 function tieneTrabajoAsignado(jefeId, empleadoId) {
@@ -55,6 +55,9 @@ function tieneTrabajoAsignado(jefeId, empleadoId) {
 }
 
 function puedeVerAgenda(jefeId, empleadoId) {
+  const link = db.links.find(l => l.jefeId === jefeId && l.empleadoId === empleadoId);
+  if (!link) return false;
+  if (typeof link.puedeVerAgenda === 'boolean') return link.puedeVerAgenda;
   return db.turnos.some(t => t.empleadoId === empleadoId && t.jefeAsignadoId === jefeId && t.puedeVerAgendaJefe === true);
 }
 
