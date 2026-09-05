@@ -18,6 +18,7 @@ router.get('/join-requests/:empleadoId', ah(verificacion.solicitudesPendientes))
 router.post('/join-requests/:id/responder', ah(verificacion.responderSolicitud));
 
 router.get('/historial/:jefeId', ah(verificacion.historial));
+router.patch('/agenda-permiso/:jefeId', ah(verificacion.actualizarPermisoAgendaGeneral));
 
 router.get('/verificar/datos/:empleadoId', ah(verificacion.datosEmpleado));
 router.get('/verificar/estudio/:empleadoId', ah(verificacion.estudioEmpleado));
