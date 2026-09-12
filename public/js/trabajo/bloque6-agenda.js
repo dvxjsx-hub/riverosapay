@@ -143,3 +143,13 @@
   script.async = false;
   document.head.appendChild(script);
 })();
+
+/* Carga la gestión exclusiva de trabajos congelados para BOSS. */
+(function () {
+  if (window.__riverosapayTrabajosCongeladosLoader) return;
+  window.__riverosapayTrabajosCongeladosLoader = true;
+  const script = document.createElement('script');
+  script.src = 'js/trabajo/trabajos-congelados.js';
+  script.async = false;
+  document.head.appendChild(script);
+})();
