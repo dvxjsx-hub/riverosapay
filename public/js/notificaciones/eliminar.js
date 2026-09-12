@@ -9,7 +9,35 @@
     if (window.__riverosapayEliminarNotificacionesInstalado) return;
     window.__riverosapayEliminarNotificacionesInstalado = true;
     const renderBase = window.renderNotificacionesModal;
-    window.renderNotificacionesModal = function () { renderBase(); instalarControles(); decorarFilas(); };
+    window.renderNotificacionesModal = function () { renderBase(); personalizarNotificaciones(); instalarControles(); decorarFilas(); };
+  }
+  function personalizarNotificaciones() {
+    const titulo = document.querySelector('#modal-title');
+    if (titulo) titulo.textContent = 'Notificaciones';
+    const textos = document.querySelectorAll('#modal-body .notif-text');
+    textos.forEach((contenedor) => {
+      const walker = document.createTreeWalker(contenedor, NodeFilter.SHOW_TEXT);
+      const nodos = [];
+      let nodo;
+      while ((nodo = walker.nextNode())) nodos.push(nodo);
+      nodos.forEach((texto) => {
+        if (!texto.nodeValue || !texto.nodeValue.includes('"')) return;
+        const partes = texto.nodeValue.split(/("[^"]+")/g);
+        if (partes.length < 2) return;
+        const fragmento = document.createDocumentFragment();
+        partes.forEach((parte) => {
+          if (/^"[^"]+"$/.test(parte)) {
+            const nombreTrabajo = document.createElement('span');
+            nombreTrabajo.className = 'notif-work-name';
+            nombreTrabajo.textContent = parte.slice(1, -1);
+            fragmento.appendChild(nombreTrabajo);
+          } else if (parte) {
+            fragmento.appendChild(document.createTextNode(parte));
+          }
+        });
+        texto.parentNode.replaceChild(fragmento, texto);
+      });
+    });
   }
   function puedeEliminar(notif) { return !!notif && notif.tipo !== 'solicitud' && notif.usuarioId === STATE.user.id; }
   function instalarControles() {
@@ -91,6 +119,7 @@
     #modal-body .notif-row + .notif-row{border-top:1px solid var(--line);}
     #modal-body .notif-text{font-size:12px;line-height:1.38;}
     #modal-body .notif-text b{font-weight:650;}
+    #modal-body .notif-work-name{color:var(--green-700);font-weight:650;}
     #modal-body .notif-fecha{font-size:9.5px;line-height:1.2;}
     #modal-body .notif-badge{font-size:9px;padding:3px 7px;}
     #modal-body .notif-actions{margin-top:5px!important;gap:6px!important;}
