@@ -1,5 +1,6 @@
 const express = require('express');
 const trabajo = require('../controllers/trabajo.controller');
+const trabajoEliminacion = require('../controllers/trabajoEliminacion.controller');
 const trabajadorPersonal = require('../controllers/trabajadorPersonal.controller');
 const trabajoPago = require('../controllers/trabajoPago.controller');
 const trabajoCongelado = require('../controllers/trabajoCongelado.controller');
@@ -25,9 +26,9 @@ router.patch('/trabajo/turnos/:turnoId/pago-empleado', bloquearPagoEmpleadoFinal
 router.patch('/trabajo/turnos/:turnoId/permiso-agenda', ah(trabajo.actualizarPermisoAgenda));
 router.post('/trabajo/turnos/:turnoId/congelar', ah(trabajoCongelado.congelarTrabajo));
 router.post('/trabajo/turnos/:turnoId/finalizar', ah(trabajo.finalizarTurno));
-router.delete('/trabajo/turnos/:turnoId', ah(trabajo.eliminarTurno));
-router.post('/trabajo/turnos/:turnoId/confirmar-eliminacion', ah(trabajo.confirmarEliminacion));
-router.post('/trabajo/turnos/:turnoId/rechazar-eliminacion', ah(trabajo.rechazarEliminacion));
+router.delete('/trabajo/turnos/:turnoId', ah(trabajoEliminacion.eliminarTurno));
+router.post('/trabajo/turnos/:turnoId/confirmar-eliminacion', ah(trabajoEliminacion.confirmarEliminacion));
+router.post('/trabajo/turnos/:turnoId/rechazar-eliminacion', ah(trabajoEliminacion.rechazarEliminacion));
 router.post('/abonos', ah(abono.crearAbono));
 router.get('/abonos/jefe/:jefeId/empleado/:empleadoId', ah(abono.listarAbonos));
 router.delete('/abonos/:abonoId', ah(abono.eliminarAbono));
