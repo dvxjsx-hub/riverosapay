@@ -53,4 +53,32 @@ async function congelarTrabajo(req, res) {
   res.json({ ok: true, turno });
 }
 
-module.exports = { congelarTrabajo };
+async function descongelarTrabajo(req, res) {
+  const turno = trabajo.buscarTurnoPorId(req.params.turnoId);
+  if (!turno) return res.status(404).json({ error: 'Trabajo no encontrado.' });
+
+  const actorId = usuarioActual(req);
+  if (!turno.jefeAsignadoId || actorId !== turno.jefeAsignadoId) {
+    return res.status(403).json({ error: 'Solo el BOSS asignado puede descongelar este trabajo.' });
+  }
+  if (turno.congelado !== true) {
+    return res.status(409).json({ error: 'Este trabajo no está congelado.' });
+  }
+
+  turno.congelado = false;
+  turno.descongeladoAt = new Date().toISOString();
+  await save();
+  await auditoria.registrar({
+    actorId,
+    actorType: 'user',
+    action: 'descongelar_trabajo',
+    resource: 'trabajo',
+    resourceId: turno.id
+  });
+  trabajo.broadcast(turno.empleadoId);
+
+  try { getIO().to('jefe-' + actorId).emit('trabajo:update'); } catch (_) {}
+  res.json({ ok: true, turno });
+}
+
+module.exports = { congelarTrabajo, descongelarTrabajo };
