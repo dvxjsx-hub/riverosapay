@@ -1,4 +1,4 @@
-const { db, save } = require('../config/db');
+const { save } = require('../config/db');
 const trabajo = require('../models/trabajo.model');
 const notificaciones = require('../models/notificaciones.model');
 const usuarios = require('../models/usuarios.model');
@@ -27,8 +27,8 @@ async function eliminarTurno(req, res) {
     return res.status(403).json({ error: 'No tienes permiso para eliminar este trabajo.' });
   }
 
-  if (turno.finalizado === true || turno.congelado === true) {
-    return res.status(409).json({ error: 'Este trabajo ya no admite eliminación.' });
+  if (turno.congelado === true) {
+    return res.status(409).json({ error: 'Este trabajo está congelado y ya no admite cambios.' });
   }
 
   // Si el empleado elimina un trabajo no pagado que tiene BOSS asignado,
@@ -63,6 +63,10 @@ async function eliminarTurno(req, res) {
     return res.json({ ok: true, pendiente: true, turno });
   }
 
+  const empleadoId = turno.empleadoId;
+  const lugar = trabajo.buscarLugarPorId(turno.lugarId);
+  const boss = esBoss ? usuarios.buscarPorId(actorId) : null;
+
   trabajo.eliminarTurno(turno.id);
   await save();
   await auditoria.registrar({
@@ -72,12 +76,10 @@ async function eliminarTurno(req, res) {
     resource: 'trabajo',
     resourceId: turno.id
   });
-  trabajo.broadcast(turno.empleadoId);
+  trabajo.broadcast(empleadoId);
 
   if (esBoss) {
-    const boss = usuarios.buscarPorId(actorId);
-    const lugar = trabajo.buscarLugarPorId(turno.lugarId);
-    await notificaciones.crearParaUsuario(turno.empleadoId, 'trabajo_eliminado', {
+    await notificaciones.crearParaUsuario(empleadoId, 'trabajo_eliminado', {
       modoDestino: 'empleado',
       jefeUsername: boss ? boss.username : (req.body && req.body.actorJefeUsername) || 'Tu BOSS',
       lugar: lugar ? lugar.nombre : ''
@@ -97,6 +99,9 @@ async function confirmarEliminacion(req, res) {
   }
   if (turno.eliminacionPendiente !== true) {
     return res.status(409).json({ error: 'Este trabajo no tiene una solicitud de eliminación pendiente.' });
+  }
+  if (turno.congelado === true) {
+    return res.status(409).json({ error: 'Este trabajo está congelado y ya no admite cambios.' });
   }
 
   const empleadoId = turno.empleadoId;
