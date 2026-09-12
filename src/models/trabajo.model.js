@@ -1,0 +1,104 @@
+const { db } = require('../config/db');
+const { getIO } = require('../realtime/io');
+
+function enriquecerTurno(turno) {
+  if (!turno || !turno.jefeAsignadoId) return turno;
+  const jefe = db.users.find(u => u.id === turno.jefeAsignadoId);
+  if (!jefe) return turno;
+  return { ...turno, jefeUsername: jefe.username, jefeNombre: jefe.nombreCompleto || jefe.username };
+}
+
+function snapshot(empleadoId) {
+  const turnos = db.turnos.filter(t => t.empleadoId === empleadoId).map(enriquecerTurno);
+  const idsConTurnos = new Set(turnos.map(t => t.lugarId));
+  const lugares = db.lugares.filter(l => l.empleadoId === empleadoId && idsConTurnos.has(l.id));
+  return { lugares, turnos };
+}
+
+function broadcast(empleadoId) {
+  getIO().to('emp-' + empleadoId).emit('trabajo:update', snapshot(empleadoId));
+}
+
+function buscarOCrearLugar(empleadoId, nombreLugar) {
+  let lug = db.lugares.find(l => l.empleadoId === empleadoId && l.nombre.toLowerCase() === nombreLugar.toLowerCase());
+  if (!lug) {
+    lug = { id: require('../utils/utils').newId('lug'), empleadoId, nombre: nombreLugar };
+    db.lugares.push(lug);
+  }
+  return lug;
+}
+
+function buscarLugarPorId(id) { return db.lugares.find(l => l.id === id); }
+function buscarTurnoPorId(id) { return db.turnos.find(t => t.id === id); }
+function crearTurno(turno) { db.turnos.push(turno); }
+
+function marcarFinalizado(id, fecha = new Date().toISOString()) {
+  const turno = buscarTurnoPorId(id);
+  if (!turno) return null;
+  turno.finalizado = true;
+  turno.finalizadoAt = fecha;
+  return turno;
+}
+
+function eliminarTurno(id) {
+  const turno = db.turnos.find(t => t.id === id);
+  db.turnos = db.turnos.filter(t => t.id !== id);
+  if (turno && !db.turnos.some(t => t.lugarId === turno.lugarId)) db.lugares = db.lugares.filter(l => l.id !== turno.lugarId);
+}
+
+function misJefes(empleadoId) {
+  const links = new Map();
+  db.links.filter(l => l.empleadoId === empleadoId).forEach(l => {
+    links.set(l.jefeId, {
+      jefeId: l.jefeId,
+      jefeUsername: l.jefeUsername,
+      puedeVerAgenda: l.puedeVerAgenda === true
+    });
+  });
+
+  // Un BOSS con un trabajo asignado también es un vínculo laboral válido.
+  db.turnos.filter(t => t.empleadoId === empleadoId && t.jefeAsignadoId).forEach(t => {
+    if (links.has(t.jefeAsignadoId)) return;
+    const jefe = db.users.find(u => u.id === t.jefeAsignadoId);
+    links.set(t.jefeAsignadoId, {
+      jefeId: t.jefeAsignadoId,
+      jefeUsername: jefe ? jefe.username : 'BOSS',
+      puedeVerAgenda: puedeVerAgenda(t.jefeAsignadoId, empleadoId)
+    });
+  });
+
+  return Array.from(links.values());
+}
+
+function tieneTrabajoAsignado(jefeId, empleadoId) {
+  return db.turnos.some(t => t.empleadoId === empleadoId && t.jefeAsignadoId === jefeId);
+}
+
+function puedeVerAgenda(jefeId, empleadoId) {
+  const link = db.links.find(l => l.jefeId === jefeId && l.empleadoId === empleadoId);
+  if (!link) return false;
+  if (typeof link.puedeVerAgenda === 'boolean') return link.puedeVerAgenda;
+  return db.turnos.some(t => t.empleadoId === empleadoId && t.jefeAsignadoId === jefeId && t.puedeVerAgendaJefe === true);
+}
+
+function empleadosConTrabajosAsignados(jefeId) {
+  const ids = [...new Set(db.turnos.filter(t => t.jefeAsignadoId === jefeId).map(t => t.empleadoId))];
+  return ids.map(empleadoId => {
+    const user = db.users.find(u => u.id === empleadoId);
+    const personal = db.trabajadoresPersonal.find(t => t.id === empleadoId && t.jefeId === jefeId);
+    const turnos = db.turnos.filter(t => t.empleadoId === empleadoId && t.jefeAsignadoId === jefeId).map(enriquecerTurno);
+    const idsLugares = new Set(turnos.map(t => t.lugarId));
+    const lugares = db.lugares.filter(l => idsLugares.has(l.id));
+    return {
+      empleadoId,
+      empleadoTipo: personal ? 'personal' : 'usuario',
+      empleadoUsername: user ? user.username : '',
+      empleadoNombre: user ? (user.nombreCompleto || user.username) : (personal ? personal.nombre : 'Empleado'),
+      puedeVerAgenda: personal ? false : puedeVerAgenda(jefeId, empleadoId),
+      lugares,
+      turnos
+    };
+  });
+}
+
+module.exports = { snapshot, broadcast, buscarOCrearLugar, buscarLugarPorId, buscarTurnoPorId, crearTurno, marcarFinalizado, eliminarTurno, misJefes, tieneTrabajoAsignado, puedeVerAgenda, empleadosConTrabajosAsignados };
